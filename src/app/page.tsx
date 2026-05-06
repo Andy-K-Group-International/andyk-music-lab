@@ -5,10 +5,35 @@ export const metadata: Metadata = {
   title: "Andy'K Music Lab — Professional tools for producers and DJs",
 };
 
+const IconEqualizer = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <rect x="2" y="9" width="3.5" height="12" rx="1.75" opacity="0.45"/>
+    <rect x="2" y="5" width="3.5" height="3.5" rx="1.75" opacity="0.45"/>
+    <rect x="7.5" y="4" width="3.5" height="17" rx="1.75"/>
+    <rect x="13" y="7" width="3.5" height="14" rx="1.75" opacity="0.75"/>
+    <rect x="18.5" y="2" width="3.5" height="19" rx="1.75" opacity="0.55"/>
+  </svg>
+);
+
+const IconPulse = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="2,12 5,12 7,5 9,19 11,9 13,15 15,11 17,13 19,12 22,12"/>
+  </svg>
+);
+
+const IconVinyl = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+    <circle cx="12" cy="12" r="10"/>
+    <circle cx="12" cy="12" r="5.5"/>
+    <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/>
+    <path d="M12 6.5 A5.5 5.5 0 0 1 17.5 12"/>
+  </svg>
+);
+
 const tools = [
   {
     href: "/mastering",
-    icon: "🎚️",
+    icon: <IconEqualizer />,
     title: "Mastering Tool",
     description:
       "Upload your track and get a professional master — loudness normalization to -14 LUFS, EQ, and true-peak limiting.",
@@ -16,7 +41,7 @@ const tools = [
   },
   {
     href: "/bpm",
-    icon: "🥁",
+    icon: <IconPulse />,
     title: "BPM + Key Detector",
     description:
       "Instant BPM and musical key analysis from MP3 or WAV. Energy level detection included.",
@@ -24,7 +49,7 @@ const tools = [
   },
   {
     href: "/planner",
-    icon: "🎛️",
+    icon: <IconVinyl />,
     title: "DJ Set Planner",
     description:
       "Build harmonically coherent playlists using the Camelot Wheel. Perfect transitions every time.",
@@ -77,29 +102,46 @@ export default function LandingPage() {
   return (
     <div className="relative min-h-screen">
       {/* Hero */}
-      <section className="relative overflow-hidden py-28 px-6">
+      <section className="relative overflow-hidden py-36 px-6">
         <div className="hero-gradient" />
+        <div className="hero-glow" />
         <div className="cartesian-grid" />
         <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <span className="inline-block font-mono text-xs tracking-widest text-[var(--color-highlight)] uppercase mb-4 px-3 py-1 rounded-full border border-[var(--color-highlight)]/30 bg-[var(--color-soft-green)]">
+          <span className="inline-block font-mono text-xs tracking-widest text-[var(--color-highlight)] uppercase mb-6 px-3 py-1 rounded-full border border-[var(--color-highlight)]/30 bg-[var(--color-soft-green)]">
             By Andy&apos;K Group International
           </span>
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-[var(--color-foreground)] mt-4 mb-6 gradient-text">
-            Andy&apos;K Music Lab
+          <h1 className="text-6xl md:text-8xl font-bold tracking-tight text-[var(--color-foreground)] mt-2 mb-6 gradient-text leading-[1.05]">
+            Andy&apos;K<br className="hidden md:block"/>Music Lab
           </h1>
-          <p className="text-xl text-[var(--color-muted)] max-w-2xl mx-auto leading-relaxed">
-            Professional tools for producers and DJs. Master your tracks, detect BPM &amp; Key, and
-            plan harmonically perfect DJ sets — all in the browser.
+          <p className="text-xl md:text-2xl text-[var(--color-muted)] max-w-2xl mx-auto leading-relaxed mb-10">
+            Professional audio tools for producers and DJs — master tracks, detect BPM &amp; key, plan harmonically perfect sets. All in the browser.
           </p>
-          <div className="flex flex-wrap justify-center gap-4 mt-10">
+
+          {/* Stat pills */}
+          <div className="flex flex-wrap justify-center gap-3 mb-10">
+            <span className="stat-pill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><polyline points="20,6 9,17 4,12"/></svg>
+              3 professional tools
+            </span>
+            <span className="stat-pill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              100% browser-local
+            </span>
+            <span className="stat-pill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              No sign-up required
+            </span>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-3">
             {tools.map((t) => (
               <Link
                 key={t.href}
                 href={t.href}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--color-deep-teal)] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[var(--color-deep-teal)] text-white text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-[var(--color-deep-teal)]/20"
               >
-                <span>{t.icon}</span>
                 {t.title}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </Link>
             ))}
           </div>
@@ -114,8 +156,10 @@ export default function LandingPage() {
         <div className="grid md:grid-cols-3 gap-6">
           {tools.map((t) => (
             <Link key={t.href} href={t.href} className="group">
-              <div className="glass-card rounded-2xl p-6 h-full flex flex-col">
-                <div className="text-3xl mb-4">{t.icon}</div>
+              <div className="glass-card rounded-2xl p-7 h-full flex flex-col">
+                <div className="tool-icon mb-5">
+                  {t.icon}
+                </div>
                 <div className="flex items-center gap-2 mb-2">
                   <h3 className="font-semibold text-[var(--color-foreground)]">{t.title}</h3>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-soft-green)] text-[var(--color-deep-teal)] font-medium">
@@ -125,8 +169,9 @@ export default function LandingPage() {
                 <p className="text-sm text-[var(--color-muted)] leading-relaxed flex-1">
                   {t.description}
                 </p>
-                <div className="mt-4 text-sm text-[var(--color-highlight)] font-medium group-hover:underline">
-                  Open tool →
+                <div className="mt-5 flex items-center gap-1.5 text-sm text-[var(--color-highlight)] font-medium group-hover:gap-3 transition-all duration-200">
+                  Open tool
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </div>
               </div>
             </Link>
