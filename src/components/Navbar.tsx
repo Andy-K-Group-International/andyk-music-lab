@@ -1,78 +1,74 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
 
+const SunIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="5"/>
+    <line x1="12" y1="1" x2="12" y2="3"/>
+    <line x1="12" y1="21" x2="12" y2="23"/>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+    <line x1="1" y1="12" x2="3" y2="12"/>
+    <line x1="21" y1="12" x2="23" y2="12"/>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+);
+
 export default function Navbar() {
-  const pathname = usePathname();
   const { theme, toggle } = useTheme();
 
-  const links = [
-    { href: "/mastering", label: "Mastering" },
-    { href: "/bpm", label: "BPM + Key" },
-    { href: "/planner", label: "DJ Planner" },
-  ];
-
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 border-b border-[var(--color-grid-500)] backdrop-blur-md">
-      <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="font-mono text-sm font-bold text-[var(--color-deep-teal)] tracking-tight">
-            Andy&apos;K
-          </span>
-          <span className="text-[var(--color-grid-700)] text-sm font-light">|</span>
-          <span className="text-sm font-medium text-[var(--color-foreground)]">Music Lab</span>
+    <nav className="premium-nav">
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+        {/* Logo */}
+        <Link href="/" className="flex items-center flex-shrink-0">
+          <span className="logo-brand">Andy&apos;K</span>
+          <span className="logo-pipe">|</span>
+          <span className="logo-name">Music Lab</span>
         </Link>
 
-        <div className="flex items-center gap-1">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                pathname === l.href
-                  ? "bg-[var(--color-soft-green)] text-[var(--color-deep-teal)] font-medium"
-                  : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-grid-300)]"
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
-
-          <div className="w-px h-5 bg-[var(--color-grid-500)] mx-2" />
-
+        {/* Center nav links */}
+        <div className="hidden md:flex items-center gap-1">
+          <a href="/#tools" className="nav-link">Tools</a>
+          <a href="/#pricing" className="nav-link">Pricing</a>
           <a
             href="https://djandyofficial.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-[var(--color-muted-2)] hover:text-[var(--color-highlight)] transition-colors px-2 py-1.5"
+            className="nav-link"
           >
-            djandyofficial.com ↗
+            About
           </a>
+        </div>
+
+        {/* Right side */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <a
+            href="https://djandyofficial.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nav-back-link hidden sm:block"
+          >
+            ← djandyofficial.com
+          </a>
+
+          <div className="w-px h-5 bg-white/10" />
 
           <button
             onClick={toggle}
-            aria-label="Toggle dark mode"
-            className="ml-2 w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-muted)] hover:bg-[var(--color-grid-300)] transition-colors"
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="theme-toggle-btn"
           >
-            {theme === "dark" ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" />
-                <line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-              </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
-            )}
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
           </button>
         </div>
       </div>

@@ -15,11 +15,11 @@ const ThemeContext = createContext<ThemeContextValue>({
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = (localStorage.getItem("andyk-ml-theme") as Theme) ?? "light";
+    const stored = (localStorage.getItem("andyk-ml-theme") as Theme) ?? "dark";
     setTheme(stored);
     document.documentElement.setAttribute("data-theme", stored);
     setMounted(true);
@@ -33,7 +33,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme: mounted ? theme : "light", toggle }}>
+    <ThemeContext.Provider value={{ theme: mounted ? theme : "dark", toggle }}>
       {children}
     </ThemeContext.Provider>
   );
