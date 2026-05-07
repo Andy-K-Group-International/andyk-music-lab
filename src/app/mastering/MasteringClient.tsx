@@ -1,6 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import HowItWorks from "@/components/HowItWorks";
+
+const MASTERING_STEPS = [
+  { text: "Your file is loaded locally via the Web Audio API — nothing leaves your browser." },
+  { text: "We analyse LUFS, peak dBFS, BPM, and musical key." },
+  { text: "EQ correction is applied: low-cut at 30 Hz, optional high-shelf at 12 kHz." },
+  { text: "Loudness is normalised to your chosen platform standard (e.g. Spotify −14 LUFS)." },
+  { text: "Stereo widening via mid/side phase processing." },
+  { text: "True-peak limiter at −0.3 dBTP protects against clipping." },
+  { text: "The mastered file is encoded as a 16-bit WAV and offered for download." },
+  { text: "Your audio never leaves your browser — 100% private.", warning: true },
+];
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const PLATFORM_LUFS = { spotify: -14, apple: -16, youtube: -14 } as const;
@@ -830,8 +842,9 @@ export default function MasteringClient() {
 
         {/* Upload */}
         {!audioBuffer ? (
+          <>
           <div
-            className={`upload-zone rounded-2xl p-12 flex flex-col items-center justify-center text-center cursor-pointer mb-8 ${dragOver ? "drag-over" : ""}`}
+            className={`upload-zone rounded-2xl p-12 flex flex-col items-center justify-center text-center cursor-pointer mb-4 ${dragOver ? "drag-over" : ""}`}
             onDragOver={e => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
@@ -854,6 +867,12 @@ export default function MasteringClient() {
               </>
             )}
           </div>
+          <HowItWorks
+            title="How Mastering Works"
+            steps={MASTERING_STEPS}
+            privacyNote="Your audio never leaves your browser. All processing runs locally via the Web Audio API."
+          />
+          </>
         ) : (
           <>
             {/* ── Full-width Waveform Player ── */}

@@ -1,6 +1,17 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import HowItWorks from "@/components/HowItWorks";
+
+const BPM_STEPS = [
+  { text: "Your audio is loaded into an AudioBuffer via the Web Audio API." },
+  { text: "BPM is detected using onset energy autocorrelation — the algorithm finds the dominant rhythmic period." },
+  { text: "Key is detected using the Krumhansl-Schmuckler chroma correlation algorithm." },
+  { text: "Camelot code is mapped from the detected key using the Camelot Wheel standard." },
+  { text: "Danceability is calculated from a weighted combination of BPM proximity to 128 and overall energy." },
+  { text: "Song Pitch is estimated via autocorrelation in the 80–1800 Hz range." },
+  { text: "All processing runs 100% in your browser — your file is never uploaded.", warning: true },
+];
 
 // ── Music theory constants ─────────────────────────────────────────────────
 const MAJOR_PROFILE = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
@@ -479,6 +490,15 @@ export default function BpmClient() {
                 </>
               )}
             </div>
+
+            {/* How it works */}
+            {!file && (
+              <HowItWorks
+                title="How BPM & Key Detection Works"
+                steps={BPM_STEPS}
+                privacyNote="Processing happens 100% in your browser. Your audio file is never uploaded to any server."
+              />
+            )}
 
             {/* Waveform animation during analysis */}
             {(analyzing || file) && (

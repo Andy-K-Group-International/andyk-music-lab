@@ -1,6 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import HowItWorks from "@/components/HowItWorks";
+
+const PLANNER_STEPS = [
+  { text: "Add your tracks with BPM, Camelot key, and duration." },
+  { text: "The Camelot Wheel algorithm calculates harmonic compatibility between every pair of tracks." },
+  { text: "Perfect: same key — identical Camelot position (e.g. 8B → 8B)." },
+  { text: "Good: ±1 step on the wheel or same number switching mode (e.g. 8B → 9B or 8B → 8A)." },
+  { text: "Risky: 2 steps away on the Camelot Wheel — noticeable but manageable clash." },
+  { text: "Avoid: incompatible keys — more than 2 steps apart on the wheel." },
+  { text: "Energy Flow: a canvas visualisation of tempo across the set." },
+  { text: "Export your set as Rekordbox XML — ready to import into Pioneer DJ software." },
+  { text: "No data is sent to any server. Everything stays in your browser.", warning: true },
+];
 
 // ── Camelot logic ──────────────────────────────────────────────────────────
 const CAMELOT_KEYS = [
@@ -266,6 +279,13 @@ export default function PlannerClient() {
             Add your tracks with Camelot keys, drag to reorder, auto-sort harmonically, and export for Rekordbox.
           </p>
         </div>
+
+        {/* How it works */}
+        <HowItWorks
+          title="How DJ Set Planner Works"
+          steps={PLANNER_STEPS}
+          privacyNote="No data is sent to any server. The planner runs entirely in your browser."
+        />
 
         {/* BPM filter */}
         <div className="glass-card rounded-2xl p-5 mb-4">
