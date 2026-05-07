@@ -24,18 +24,45 @@ const playfair = Playfair_Display({
   weight: ["400", "600", "700"],
 });
 
+const SITE_URL = "https://lab.djandykofficial.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Andy'K Music Lab — Professional tools for producers and DJs",
     template: "%s | Andy'K Music Lab",
   },
   description:
     "Professional audio tools for producers and DJs. Mastering, BPM & Key detection, and DJ Set Planner — by Andy'K Group International.",
-  keywords: ["DJ tools", "mastering", "BPM detector", "key detection", "DJ set planner", "Andy'K"],
-  authors: [{ name: "Andy'K Group International" }],
+  keywords: ["DJ tools", "mastering", "BPM detector", "key detection", "DJ set planner", "Andy'K", "Andy'K Music Lab"],
+  authors: [{ name: "Andy'K Group International", url: "https://djandykofficial.com" }],
   creator: "Andy'K Group International",
   publisher: "ANDY'K GROUP INTERNATIONAL LTD",
+  openGraph: {
+    type: "website",
+    locale: "en_GB",
+    url: SITE_URL,
+    siteName: "Andy'K Music Lab",
+    title: "Andy'K Music Lab — Professional tools for producers and DJs",
+    description: "Professional audio tools for producers and DJs. Mastering, BPM & Key detection, DJ Set Planner — by Andy'K Group International.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Andy'K Music Lab",
+    description: "Professional audio tools for producers and DJs.",
+  },
+  alternates: { canonical: SITE_URL },
+  robots: { index: true, follow: true },
 };
+
+const legalLinks = [
+  { href: "/privacy-policy", label: "Privacy Policy" },
+  { href: "/cookies-policy", label: "Cookies" },
+  { href: "/terms-and-conditions", label: "Terms" },
+  { href: "/disclaimer", label: "Disclaimer" },
+  { href: "/company-information", label: "Company Info" },
+  { href: "/copyright", label: "Copyright" },
+];
 
 export default function RootLayout({
   children,
@@ -59,10 +86,12 @@ export default function RootLayout({
           <Navbar />
           <main className="pt-16">{children}</main>
 
-          {/* Premium Footer */}
+          {/* Footer */}
           <footer className="premium-footer">
             <div className="max-w-6xl mx-auto">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 pb-8 mb-8 footer-divider">
+
+              {/* Top row */}
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 pb-8 mb-6 footer-divider">
                 {/* Logo + tagline */}
                 <div>
                   <div className="footer-logo mb-3">
@@ -71,30 +100,45 @@ export default function RootLayout({
                     <span className="text-white/70 font-medium text-base">Music Lab</span>
                   </div>
                   <p className="footer-tagline">Professional audio tools — built by DJ Andy&apos;K</p>
-                  <div className="flex items-center gap-5">
+                  <div className="flex items-center gap-5 flex-wrap">
                     <Link href="/#tools" className="footer-link">Tools</Link>
                     <Link href="/#pricing" className="footer-link">Pricing</Link>
-                    <a href="https://djandyofficial.com" target="_blank" rel="noopener noreferrer" className="footer-link">djandyofficial.com ↗</a>
+                    <a href="https://djandykofficial.com" target="_blank" rel="noopener noreferrer" className="footer-link">
+                      djandykofficial.com ↗
+                    </a>
                   </div>
                 </div>
 
-                {/* Right column */}
+                {/* Company info */}
                 <div className="text-right">
                   <div className="text-xs font-mono text-white/20 tracking-widest uppercase mb-2">By</div>
                   <div className="text-sm font-semibold text-white/50">Andy&apos;K Group International</div>
+                  <div className="text-xs font-mono text-white/20 mt-1">Company No. 16453500</div>
                 </div>
               </div>
 
+              {/* Legal links */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6">
+                {legalLinks.map(l => (
+                  <Link key={l.href} href={l.href} className="footer-link" style={{ fontSize: 11 }}>
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
+
               {/* Bottom row */}
-              <div className="footer-bottom">
-                <span className="footer-copy">© ANDY&apos;K GROUP INTERNATIONAL LTD</span>
-                <div className="flex items-center gap-5">
-                  <a href="https://djandyofficial.com" target="_blank" rel="noopener noreferrer" className="footer-link">
-                    djandyofficial.com
+              <div className="footer-bottom" style={{ borderTop: "1px solid rgba(99,179,154,0.06)", paddingTop: 16 }}>
+                <span className="footer-copy">
+                  © 2026 Andy&apos;K Music Lab · ANDY&apos;K GROUP INTERNATIONAL LTD
+                </span>
+                <div className="flex items-center gap-4">
+                  <a href="https://djandykofficial.com" target="_blank" rel="noopener noreferrer" className="footer-link">
+                    djandykofficial.com
                   </a>
-                  <span className="font-mono text-white/20 text-xs">v2.0.0</span>
+                  <span className="font-mono text-white/20 text-xs">v2.1.0</span>
                 </div>
               </div>
+
             </div>
           </footer>
         </ThemeProvider>

@@ -41,7 +41,7 @@ export default function Navbar() {
           <a href="/#tools" className="nav-link">Tools</a>
           <a href="/#pricing" className="nav-link">Pricing</a>
           <a
-            href="https://djandyofficial.com"
+            href="https://djandykofficial.com"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-link"
@@ -53,12 +53,12 @@ export default function Navbar() {
         {/* Right side */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <a
-            href="https://djandyofficial.com"
+            href="https://djandykofficial.com"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-back-link hidden sm:block"
           >
-            ← djandyofficial.com
+            ← djandykofficial.com
           </a>
 
           <div className="w-px h-5 bg-white/10" />
