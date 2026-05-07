@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Mono, Playfair_Display } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono, Playfair_Display, DM_Sans } from "next/font/google";
 import { ThemeProvider } from "@/context/ThemeContext";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
@@ -22,6 +22,12 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
   style: ["normal", "italic"],
   weight: ["400", "600", "700"],
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  weight: ["400", "600", "800"],
 });
 
 const SITE_URL = "https://lab.djandykofficial.com";
@@ -80,7 +86,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${playfair.variable} antialiased font-sans min-h-screen`}
+        className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${playfair.variable} ${dmSans.variable} antialiased font-sans min-h-screen`}
       >
         <ThemeProvider>
           <Navbar />
