@@ -75,7 +75,7 @@ export default function RootLayout({
         {/* Prevent theme flash — runs before React hydration */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('andyk-ml-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}`,
+            __html: `try{var s=localStorage.getItem('andyk-lab-theme');var p=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',s||p);}catch(e){document.documentElement.setAttribute('data-theme','dark');}`,
           }}
         />
       </head>

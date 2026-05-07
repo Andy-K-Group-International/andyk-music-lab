@@ -4,13 +4,15 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
 
+const STORAGE_KEY = "andyk-lab-theme";
+
 interface ThemeContextValue {
   theme: Theme;
   toggle: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "light",
+  theme: "dark",
   toggle: () => {},
 });
 
@@ -19,16 +21,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = (localStorage.getItem("andyk-ml-theme") as Theme) ?? "dark";
-    setTheme(stored);
-    document.documentElement.setAttribute("data-theme", stored);
+    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    const preferred = window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    const resolved: Theme = stored ?? preferred;
+    setTheme(resolved);
+    document.documentElement.setAttribute("data-theme", resolved);
     setMounted(true);
   }, []);
 
   function toggle() {
-    const next: Theme = theme === "light" ? "dark" : "light";
+    const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    localStorage.setItem("andyk-ml-theme", next);
+    localStorage.setItem(STORAGE_KEY, next);
     document.documentElement.setAttribute("data-theme", next);
   }
 
