@@ -877,7 +877,7 @@ export default function MasteringClient() {
           <>
             {/* ── Full-width Waveform Player ── */}
             <div className="waveform-player mb-6">
-              <div className="waveform-hit" style={{ height: 88, borderRadius: 0, padding: "8px 16px" }}
+              <div className="waveform-hit waveform-main" style={{ height: 88, borderRadius: 0, padding: "8px 16px" }}
                 onClick={seekMain}>
                 <canvas ref={mainCanvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
                 <div className="waveform-playhead" style={{ left: `calc(${mainProgress*100}% + 14px)`, background: "#63B39A" }} />

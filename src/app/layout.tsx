@@ -35,12 +35,15 @@ const SITE_URL = "https://lab.djandykofficial.com";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Andy'K Music Lab — Professional tools for producers and DJs",
+    default: "Andy'K Music Lab | Free Audio Mastering, BPM & Key Detector",
     template: "%s | Andy'K Music Lab",
   },
   description:
-    "Professional audio tools for producers and DJs. Mastering, BPM & Key detection, and DJ Set Planner — by Andy'K Group International.",
-  keywords: ["DJ tools", "mastering", "BPM detector", "key detection", "DJ set planner", "Andy'K", "Andy'K Music Lab"],
+    "Professional audio tools by DJ Andy'K. Free online mastering to Spotify -14 LUFS standard, BPM & Key detector with Camelot Wheel, DJ Set Planner. 100% client-side — your audio never leaves your browser.",
+  keywords: [
+    "audio mastering online free", "BPM detector", "key finder", "Camelot Wheel",
+    "DJ set planner", "Spotify mastering", "LUFS normalizer", "DJ Andy'K", "Andy'K Music Lab",
+  ],
   authors: [{ name: "Andy'K Group International", url: "https://djandykofficial.com" }],
   creator: "Andy'K Group International",
   publisher: "ANDY'K GROUP INTERNATIONAL LTD",
@@ -49,13 +52,14 @@ export const metadata: Metadata = {
     locale: "en_GB",
     url: SITE_URL,
     siteName: "Andy'K Music Lab",
-    title: "Andy'K Music Lab — Professional tools for producers and DJs",
-    description: "Professional audio tools for producers and DJs. Mastering, BPM & Key detection, DJ Set Planner — by Andy'K Group International.",
+    title: "Andy'K Music Lab — Free Professional Audio Tools",
+    description: "Master your tracks to Spotify standard, detect BPM & key, plan DJ sets. Built by DJ Andy'K. Free to try.",
+    images: [{ url: "/og-image.jpg" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Andy'K Music Lab",
-    description: "Professional audio tools for producers and DJs.",
+    description: "Free audio mastering, BPM detector & DJ set planner by DJ Andy'K",
   },
   alternates: { canonical: SITE_URL },
   robots: { index: true, follow: true },
@@ -82,6 +86,26 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem('djandyk-theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}`,
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              "name": "Andy'K Music Lab",
+              "url": "https://lab.djandykofficial.com",
+              "description": "Professional audio tools for producers and DJs",
+              "applicationCategory": "MusicApplication",
+              "operatingSystem": "Web Browser",
+              "offers": [
+                { "@type": "Offer", "name": "Studio Pass",    "price": "19",  "priceCurrency": "GBP" },
+                { "@type": "Offer", "name": "Pro Pass",       "price": "149", "priceCurrency": "GBP" },
+                { "@type": "Offer", "name": "Single Session", "price": "49",  "priceCurrency": "GBP" },
+              ],
+              "author": { "@type": "Person", "name": "DJ Andy'K", "url": "https://djandykofficial.com" },
+            }),
           }}
         />
       </head>

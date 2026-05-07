@@ -309,10 +309,14 @@ export default function PlannerClient() {
 
         {/* Track table */}
         <div className="glass-card rounded-2xl p-5 mb-4">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 90px 80px 36px", gap: 10, marginBottom: 10, padding: "0 4px" }}>
-            {["Track Title", "BPM", "Camelot", "Duration", ""].map(h => (
-              <span key={h} style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-muted-2)" }}>{h}</span>
-            ))}
+          <div className="planner-track-header">
+            <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-muted-2)" }}>Track Title</span>
+            <div className="planner-row-fields">
+              {["BPM", "Camelot", "Duration"].map(h => (
+                <span key={h} style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-muted-2)" }}>{h}</span>
+              ))}
+            </div>
+            <span />
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -322,19 +326,16 @@ export default function PlannerClient() {
               const isDropTarget = dropIndex === i && dragIndex !== i;
               return (
                 <div key={track.id}
-                  className="track-card-draggable"
+                  className="track-card-draggable planner-track-row"
                   draggable
                   onDragStart={() => onDragStart(i)}
                   onDragOver={e => onDragOver(e, i)}
                   onDrop={e => onDrop(e, i)}
                   onDragEnd={onDragEnd}
                   style={{
-                    display: "grid", gridTemplateColumns: "1fr 80px 90px 80px 36px", gap: 10, alignItems: "center",
                     opacity: isDragging ? 0.4 : dimmed ? 0.45 : 1,
-                    padding: "6px 8px", borderRadius: 10,
                     border: `1px solid ${isDropTarget ? "#63B39A" : "transparent"}`,
                     background: isDropTarget ? "rgba(99,179,154,0.06)" : "transparent",
-                    transition: "all 0.15s ease",
                   }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ width: 3, height: 24, borderRadius: 2, background: track.camelot ? camelotHSL(track.camelot) : "var(--color-grid-500)", flexShrink: 0 }} />
@@ -343,17 +344,19 @@ export default function PlannerClient() {
                       onFocus={e => (e.target.style.borderColor = "#63B39A")}
                       onBlur={e => (e.target.style.borderColor = "var(--color-grid-500)")} />
                   </div>
-                  <input type="number" placeholder="128" value={track.bpm} onChange={e => update(track.id, "bpm", e.target.value)}
-                    style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontSize: 13, fontFamily: "var(--font-mono)", outline: "none" }}
-                    onFocus={e => (e.target.style.borderColor = "#63B39A")} onBlur={e => (e.target.style.borderColor = "var(--color-grid-500)")} />
-                  <select value={track.camelot} onChange={e => update(track.id, "camelot", e.target.value)}
-                    style={{ width: "100%", padding: "7px 8px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontSize: 13, fontFamily: "var(--font-mono)", outline: "none" }}>
-                    <option value="">—</option>
-                    {CAMELOT_KEYS.map(k => <option key={k} value={k}>{k}</option>)}
-                  </select>
-                  <input type="text" placeholder="5:00" value={track.duration} onChange={e => update(track.id, "duration", e.target.value)}
-                    style={{ width: "100%", padding: "7px 8px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontSize: 13, fontFamily: "var(--font-mono)", outline: "none" }}
-                    onFocus={e => (e.target.style.borderColor = "#63B39A")} onBlur={e => (e.target.style.borderColor = "var(--color-grid-500)")} />
+                  <div className="planner-row-fields">
+                    <input type="number" placeholder="128" value={track.bpm} onChange={e => update(track.id, "bpm", e.target.value)}
+                      style={{ width: 80, padding: "7px 10px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontSize: 13, fontFamily: "var(--font-mono)", outline: "none" }}
+                      onFocus={e => (e.target.style.borderColor = "#63B39A")} onBlur={e => (e.target.style.borderColor = "var(--color-grid-500)")} />
+                    <select value={track.camelot} onChange={e => update(track.id, "camelot", e.target.value)}
+                      style={{ width: 90, padding: "7px 8px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontSize: 13, fontFamily: "var(--font-mono)", outline: "none" }}>
+                      <option value="">—</option>
+                      {CAMELOT_KEYS.map(k => <option key={k} value={k}>{k}</option>)}
+                    </select>
+                    <input type="text" placeholder="5:00" value={track.duration} onChange={e => update(track.id, "duration", e.target.value)}
+                      style={{ width: 80, padding: "7px 8px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontSize: 13, fontFamily: "var(--font-mono)", outline: "none" }}
+                      onFocus={e => (e.target.style.borderColor = "#63B39A")} onBlur={e => (e.target.style.borderColor = "var(--color-grid-500)")} />
+                  </div>
                   <button onClick={() => removeTrack(track.id)}
                     style={{ width: 36, height: 36, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "1px solid var(--color-grid-500)", color: "var(--color-muted-2)", cursor: "pointer", fontSize: 18, transition: "all 0.15s ease" }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#ef4444"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(239,68,68,0.35)"; }}
@@ -385,7 +388,7 @@ export default function PlannerClient() {
               <h2 style={{ fontWeight: 700, color: "var(--color-foreground)", fontSize: 16 }}>
                 Harmonic Playlist — {playlist.length} tracks · {formatTime(totalDuration)}
               </h2>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div className="planner-export-btns" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button onClick={exportText}
                   style={{ padding: "8px 14px", borderRadius: 9, border: "1px solid var(--color-grid-500)", background: copied ? "rgba(99,179,154,0.1)" : "transparent", color: copied ? "#63B39A" : "var(--color-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease" }}>
                   {copied ? "✓ Copied" : "Copy Text"}
@@ -435,7 +438,7 @@ export default function PlannerClient() {
 
             {/* Stats */}
             {compatCounts && (
-              <div className="grid grid-cols-4 gap-3 mb-8">
+              <div className="compat-stats-grid grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
                 {(["perfect", "good", "risky", "avoid"] as const).map(c => (
                   <div key={c} style={{ padding: "12px", borderRadius: 14, background: COMPAT_COLORS[c].bg, border: `1px solid ${COMPAT_COLORS[c].dot}33`, textAlign: "center" }}>
                     <div style={{ fontSize: 24, fontWeight: 800, fontFamily: "var(--font-mono)", color: COMPAT_COLORS[c].text }}>{compatCounts[c]}</div>

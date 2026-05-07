@@ -208,7 +208,7 @@ body {
 }
 .hero-title {
   font-family: var(--font-dm-sans, var(--font-sans));
-  font-size: clamp(3.75rem, 11vw, 8rem); font-weight: 800;
+  font-size: clamp(2.25rem, 11vw, 8rem); font-weight: 800;
   line-height: 0.93; letter-spacing: -0.04em; color: var(--hero-heading); margin-bottom: 28px;
   transition: color 0.3s ease;
 }
@@ -807,6 +807,91 @@ body {
 }
 .prose-legal table tbody td { opacity: 0.75; }
 .company-info-block h2 { border-bottom: none; margin-bottom: 1.2rem; }
+
+/* ===== HAMBURGER / MOBILE NAV ===== */
+.hamburger-wrap {
+  display: flex; flex-direction: column; justify-content: center;
+  align-items: center; gap: 5px; width: 16px; height: 16px;
+}
+.hamburger-line {
+  display: block; width: 16px; height: 1.5px;
+  background: var(--color-muted);
+  border-radius: 1px;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  transform-origin: center;
+}
+.hamburger-wrap.open .hamburger-line:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+.hamburger-wrap.open .hamburger-line:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger-wrap.open .hamburger-line:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+.mobile-nav-menu {
+  border-top: 1px solid rgba(99,179,154,0.1);
+  padding: 8px 16px 16px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.mobile-nav-link {
+  display: block; padding: 10px 14px; border-radius: 10px;
+  font-size: 14px; font-weight: 500; color: var(--color-muted);
+  transition: color 0.15s ease, background 0.15s ease; text-decoration: none;
+}
+.mobile-nav-link:hover { color: var(--color-foreground); background: rgba(99,179,154,0.07); }
+[data-theme="dark"] .mobile-nav-link { color: rgba(255,255,255,0.55); }
+[data-theme="dark"] .mobile-nav-link:hover { color: #fff; background: rgba(99,179,154,0.1); }
+
+/* ===== PLANNER TRACK ROWS — responsive grid ===== */
+.planner-track-header {
+  display: grid;
+  grid-template-columns: 1fr auto 36px;
+  gap: 10px; padding: 0 4px; margin-bottom: 10px; align-items: center;
+}
+.planner-track-row {
+  display: grid;
+  grid-template-columns: 1fr auto 36px;
+  gap: 10px; align-items: center;
+  padding: 6px 8px; border-radius: 10px;
+  transition: all 0.15s ease;
+}
+.planner-row-fields {
+  display: flex; gap: 8px; align-items: center;
+}
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width: 639px) {
+  /* ── Planner track table ── */
+  .planner-track-header { display: none !important; }
+  .planner-track-row {
+    grid-template-columns: 1fr 36px !important;
+    grid-template-rows: auto auto !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+    border: 1px solid var(--color-grid-500) !important;
+    background: var(--color-grid-300) !important;
+    border-radius: 12px !important;
+  }
+  .planner-track-row > *:first-child      { grid-column: 1; grid-row: 1; }
+  .planner-track-row > .planner-row-fields { grid-column: 1 / -1; grid-row: 2; flex-wrap: wrap; }
+  .planner-track-row > button:last-child   { grid-column: 2; grid-row: 1; align-self: start; }
+  .planner-row-fields > input,
+  .planner-row-fields > select { width: auto !important; flex: 1 !important; min-width: 70px; }
+
+  /* ── Mastering waveform taller on mobile ── */
+  .waveform-main { height: 120px !important; }
+
+  /* ── Planner export buttons ── */
+  .planner-export-btns { flex-direction: column !important; }
+  .planner-export-btns > button { width: 100% !important; text-align: center; justify-content: center; }
+
+  /* ── Planner compat stats 2-col on mobile ── */
+  .compat-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* ── Hero padding tighter on mobile ── */
+  .hero-content { padding: 60px 20px 120px !important; }
+
+  /* ── Tap BPM button full-width friendly ── */
+  .tap-bpm-btn { width: 120px !important; height: 120px !important; }
+
+  /* ── Camelot result metrics - smaller BPM number on tiny screens ── */
+  .bpm-result-value { font-size: 40px !important; }
+}
 
 /* ===== REDUCED MOTION ===== */
 @media (prefers-reduced-motion: reduce) {

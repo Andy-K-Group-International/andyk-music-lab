@@ -183,7 +183,7 @@ function CamelotWheel({ detected, selected, onSelect, bpm }: WheelProps) {
   const compatible = selected ? camelotNeighbors(selected) : (detected ? camelotNeighbors(detected) : []);
 
   return (
-    <svg width="310" height="310" viewBox="0 0 310 310" className="camelot-wheel-svg" style={{ maxWidth: "100%" }}>
+    <svg width="310" height="310" viewBox="0 0 310 310" className="camelot-wheel-svg" style={{ maxWidth: "min(100%, 300px)", height: "auto" }}>
       <defs>
         <filter id="glow">
           <feGaussianBlur stdDeviation="3" result="blur"/>
