@@ -1,904 +1,1115 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────
+const PLATFORM_LUFS = { spotify: -14, apple: -16, youtube: -14 } as const;
+const INTENSITY_OFFSET = { low: -4, medium: 0, high: 3 } as const;
+const STEREO_FACTOR = { narrow: 0.45, standard: 1.0, wide: 1.75 } as const;
+const NOISE_CUTOFF = { low: 30, medium: 60, high: 100 } as const;
 
-type Stage = "idle" | "loading" | "analyzing" | "eq" | "limiting" | "encoding" | "done" | "error";
 type Intensity = "low" | "medium" | "high";
 type StereoWidth = "narrow" | "standard" | "wide";
 type NoiseLevel = "low" | "medium" | "high";
 type Platform = "spotify" | "apple" | "youtube";
+type Preset = "club" | "radio" | "streaming" | "vinyl" | "custom";
+
+interface Settings {
+  intensity: Intensity; stereoWidth: StereoWidth; noiseLevel: NoiseLevel;
+  autoEQ: boolean; lowCut: boolean; highShelf: boolean; limiter: boolean;
+  platform: Platform; eqBands: [number, number, number, number, number];
+}
+
+const PRESETS: Record<Exclude<Preset, "custom">, Settings> = {
+  club:      { intensity: "high",   stereoWidth: "wide",     noiseLevel: "medium", autoEQ: true,  lowCut: true,  highShelf: true,  limiter: true,  platform: "spotify", eqBands: [3, 2, 0, 2, 1] },
+  radio:     { intensity: "high",   stereoWidth: "standard", noiseLevel: "high",   autoEQ: true,  lowCut: true,  highShelf: false, limiter: true,  platform: "apple",   eqBands: [1, 0, 1, 3, 2] },
+  streaming: { intensity: "medium", stereoWidth: "standard", noiseLevel: "medium", autoEQ: true,  lowCut: false, highShelf: false, limiter: true,  platform: "spotify", eqBands: [0, 0, 0, 0, 0] },
+  vinyl:     { intensity: "low",    stereoWidth: "narrow",   noiseLevel: "low",    autoEQ: false, lowCut: false, highShelf: true,  limiter: false, platform: "apple",   eqBands: [2, 1, -1, 1, 2] },
+};
 
 interface Analysis {
-  bpm: number;
-  keyNote: string;
-  keyMode: string;
-  pitch: string;
-  danceability: number;
-  lufs: number;
-  peak: number;
-  dr: number;
+  bpm: number; keyNote: string; keyMode: "major" | "minor";
+  pitch: number; danceability: number; lufs: number; peak: number; dr: number;
+}
+interface MasterResult {
+  url: string; buffer: AudioBuffer;
+  stats: { lufs: number; peak: number; dr: number };
 }
 
-interface BufferStats { lufs: number; peak: number; dr: number; }
+// ── Music theory ───────────────────────────────────────────────────────────
+const MAJOR_PROFILE = [6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
+const MINOR_PROFILE = [6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 
-interface MasteringResult {
-  blob: Blob;
-  masteredUrl: string;
-  masteredBuffer: AudioBuffer;
-  statsOut: BufferStats;
-}
-
-interface Metadata { title: string; artist: string; album: string; year: string; }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const STAGE_LABELS: Record<Stage, string> = {
-  idle: "", loading: "Loading audio…", analyzing: "Analyzing track…",
-  eq: "Applying EQ…", limiting: "Limiting & normalizing…", encoding: "Encoding WAV…",
-  done: "Done!", error: "Error",
-};
-const STAGE_PROGRESS: Record<Stage, number> = {
-  idle: 0, loading: 10, analyzing: 30, eq: 55, limiting: 75, encoding: 90, done: 100, error: 0,
-};
-const PLATFORM_LUFS: Record<Platform, number> = { spotify: -14, apple: -16, youtube: -14 };
-const INTENSITY_OFFSET: Record<Intensity, number> = { low: -4, medium: 0, high: 3 };
-const STEREO_FACTOR: Record<StereoWidth, number> = { narrow: 0.45, standard: 1.0, wide: 1.75 };
-const NOISE_CUTOFF: Record<NoiseLevel, number> = { low: 30, medium: 60, high: 100 };
-
-// ─── Audio utilities ──────────────────────────────────────────────────────────
-
-function fmtTime(s: number) {
-  if (!isFinite(s) || s < 0) return "0:00";
-  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
-}
-function fmtBytes(b: number) {
-  return b < 1024 * 1024 ? `${(b / 1024).toFixed(0)} KB` : `${(b / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function computeStats(buf: AudioBuffer): BufferStats {
-  let sumSq = 0, total = 0, peak = 0;
-  for (let c = 0; c < buf.numberOfChannels; c++) {
-    const d = buf.getChannelData(c);
-    for (let i = 0; i < d.length; i++) {
-      const a = Math.abs(d[i]);
-      if (a > peak) peak = a;
-      sumSq += d[i] * d[i];
-      total++;
-    }
+// ── Audio DSP helpers ──────────────────────────────────────────────────────
+function computeStats(buf: AudioBuffer): { lufs: number; peak: number; dr: number } {
+  const L = buf.getChannelData(0);
+  const R = buf.numberOfChannels > 1 ? buf.getChannelData(1) : L;
+  let sumSq = 0, peak = 0;
+  const blockSize = Math.floor(buf.sampleRate * 0.4);
+  const blocks: number[] = [];
+  for (let i = 0; i < L.length; i++) {
+    const s = (Math.abs(L[i]) + Math.abs(R[i])) / 2;
+    if (s > peak) peak = s;
+    sumSq += s * s;
   }
-  const rms = Math.sqrt(sumSq / total);
-  const lufs = 20 * Math.log10(Math.max(rms, 1e-10)) - 0.691;
-  const peakDB = 20 * Math.log10(Math.max(peak, 1e-10));
-  return { lufs, peak: peakDB, dr: peakDB - lufs };
-}
-
-// Krumhansl–Schmuckler key detection
-const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const MAJ_P = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
-const MIN_P = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
-
-function corrProfile(ch: number[], pf: number[]) {
-  const mc = ch.reduce((a, b) => a + b, 0) / 12, mp = pf.reduce((a, b) => a + b, 0) / 12;
-  let n = 0, dc = 0, dp = 0;
-  for (let i = 0; i < 12; i++) { const cc = ch[i] - mc, pp = pf[i] - mp; n += cc * pp; dc += cc * cc; dp += pp * pp; }
-  return n / (Math.sqrt(dc) * Math.sqrt(dp) + 1e-9);
-}
-
-function detectKey(buf: AudioBuffer): { note: string; mode: string } {
-  const sr = buf.sampleRate, d = buf.getChannelData(0), fsz = 2048;
-  const ch = new Array(12).fill(0), step = Math.max(1, Math.floor(d.length / 8));
-  for (let s = 0; s < 8; s++) {
-    const st = s * step;
-    if (st + fsz > d.length) break;
-    const win = new Float32Array(fsz);
-    for (let i = 0; i < fsz; i++) win[i] = d[st + i] * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / (fsz - 1)));
-    for (let bin = 2; bin < fsz / 2; bin++) {
-      const freq = (bin * sr) / fsz;
-      if (freq < 60 || freq > 3000) continue;
-      let re = 0, im = 0;
-      for (let i = 0; i < fsz; i += 4) { const a = (2 * Math.PI * bin * i) / fsz; re += win[i] * Math.cos(a); im -= win[i] * Math.sin(a); }
-      const mag = Math.sqrt(re * re + im * im);
-      const midi = Math.round(12 * Math.log2(freq / 440) + 69);
-      if (midi >= 0) ch[((midi % 12) + 12) % 12] += mag;
-    }
+  for (let b = 0; b + blockSize < L.length; b += blockSize) {
+    let bSq = 0;
+    for (let i = 0; i < blockSize; i++) bSq += ((L[b+i]+R[b+i])/2) ** 2;
+    blocks.push(bSq / blockSize);
   }
-  let best = -Infinity, bn = 0, bm: "major" | "minor" = "major";
-  for (let sh = 0; sh < 12; sh++) {
-    const rot = [...ch.slice(sh), ...ch.slice(0, sh)];
-    const maj = corrProfile(rot, MAJ_P), min = corrProfile(rot, MIN_P);
-    if (maj > best) { best = maj; bn = sh; bm = "major"; }
-    if (min > best) { best = min; bn = sh; bm = "minor"; }
-  }
-  return { note: NOTE_NAMES[bn], mode: bm };
+  blocks.sort((a, b) => b - a);
+  const loudRms = Math.sqrt(blocks[0] || 1e-10);
+  const quietRms = Math.sqrt(blocks[Math.floor(blocks.length * 0.3)] || 1e-10);
+  const dr = Math.max(0, Math.round(20 * Math.log10(loudRms / (quietRms + 1e-9))));
+  const rms = Math.sqrt(sumSq / L.length);
+  const lufs = Math.round((20 * Math.log10(rms + 1e-9) - 0.691) * 10) / 10;
+  const peakDb = Math.round(20 * Math.log10(peak + 1e-9) * 10) / 10;
+  return { lufs, peak: peakDb, dr };
 }
 
-function detectBPM(buf: AudioBuffer): number {
-  const sr = buf.sampleRate, d = buf.getChannelData(0);
-  const fSz = 512, hop = 256, frames: number[] = [];
-  const maxF = Math.min(Math.floor((d.length - fSz) / hop), 3000);
-  for (let i = 0; i < maxF; i++) { let e = 0; for (let j = 0; j < fSz; j++) e += d[i * hop + j] ** 2; frames.push(e / fSz); }
-  const maxE = Math.max(...frames) + 1e-9, n = frames.map(e => e / maxE);
-  const minL = Math.round(60 * sr / (180 * hop)), maxL = Math.round(60 * sr / (40 * hop));
-  let bc = -Infinity, bl = minL;
-  for (let lag = minL; lag <= maxL && lag < frames.length / 2; lag++) {
-    let c = 0; const len = frames.length - lag;
-    for (let i = 0; i < len; i++) c += n[i] * n[i + lag];
-    c /= len; if (c > bc) { bc = c; bl = lag; }
-  }
-  let bpm = (60 * sr) / (bl * hop);
-  while (bpm > 175) bpm /= 2; while (bpm < 80) bpm *= 2;
-  return Math.round(bpm);
-}
-
-function detectPitch(buf: AudioBuffer): string {
-  const sr = buf.sampleRate, d = buf.getChannelData(0), wsz = 2048;
-  const st = Math.floor(d.length * 0.25);
-  const minP = Math.floor(sr / 1800), maxP = Math.min(Math.floor(sr / 80), wsz / 2);
-  let bc = 0, bp = -1;
-  for (let p = minP; p <= maxP; p++) {
-    let c = 0; const len = Math.min(wsz - p, 1024);
-    for (let i = 0; i < len; i++) c += (d[st + i] || 0) * (d[st + i + p] || 0);
-    c /= len; if (c > bc) { bc = c; bp = p; }
-  }
-  if (bp < 0 || bc < 0.005) return "—";
-  const freq = sr / bp;
-  if (freq < 20 || freq > 20000) return "—";
-  const midi = Math.round(12 * Math.log2(freq / 440) + 69);
-  const oct = Math.max(0, Math.min(9, Math.floor(midi / 12) - 1));
-  return NOTE_NAMES[((midi % 12) + 12) % 12] + oct;
-}
-
-function calcDanceability(bpm: number, lufs: number): number {
-  const bScore = Math.max(0, 100 - Math.abs(bpm - 125) * 1.2);
-  const eScore = Math.min(100, Math.max(0, ((lufs + 40) / 40) * 100));
-  return Math.round(bScore * 0.45 + eScore * 0.55);
+function correlate(chroma: number[], profile: number[]): number {
+  const n = 12, mC = chroma.reduce((a,b)=>a+b,0)/n, mP = profile.reduce((a,b)=>a+b,0)/n;
+  let num=0,dc=0,dp=0;
+  for(let i=0;i<n;i++){const cc=chroma[i]-mC,pp=profile[i]-mP;num+=cc*pp;dc+=cc*cc;dp+=pp*pp;}
+  return num/(Math.sqrt(dc)*Math.sqrt(dp)+1e-9);
 }
 
 async function analyzeBuffer(buf: AudioBuffer): Promise<Analysis> {
+  const sr = buf.sampleRate, data = buf.getChannelData(0);
   const stats = computeStats(buf);
-  const bpm = detectBPM(buf);
-  const { note: keyNote, mode: keyMode } = detectKey(buf);
-  const pitch = detectPitch(buf);
-  const danceability = calcDanceability(bpm, stats.lufs);
-  return { bpm, keyNote, keyMode, pitch, danceability, ...stats };
-}
 
-// ─── Canvas utilities ─────────────────────────────────────────────────────────
-
-function drawWaveform(canvas: HTMLCanvasElement, buf: AudioBuffer, color: string, progress: number) {
-  const ctx = canvas.getContext("2d"); if (!ctx) return;
-  const { width: w, height: h } = canvas;
-  ctx.clearRect(0, 0, w, h);
-  const d = buf.getChannelData(0), step = Math.ceil(d.length / w);
-  const mid = h / 2, amp = mid * 0.88, px = Math.floor(w * progress);
-  for (let i = 0; i < w; i++) {
-    let mn = 1, mx = -1;
-    for (let j = 0; j < step; j++) { const s = d[i * step + j] ?? 0; if (s < mn) mn = s; if (s > mx) mx = s; }
-    ctx.fillStyle = i < px ? color : color + "40";
-    ctx.fillRect(i, mid - mx * amp, 1, Math.max(1, (mx - mn) * amp));
+  // Key
+  const fftSize=4096, chroma=new Array(12).fill(0), step=Math.floor(data.length/20);
+  for(let s=0;s+fftSize<data.length;s+=step){
+    const win=new Float32Array(fftSize);
+    for(let i=0;i<fftSize;i++) win[i]=data[s+i]*(0.5-0.5*Math.cos(2*Math.PI*i/(fftSize-1)));
+    for(let bin=1;bin<fftSize/2;bin++){
+      const freq=(bin*sr)/fftSize;
+      if(freq<55||freq>4000)continue;
+      let re=0,im=0;
+      for(let i=0;i<fftSize;i++){const a=2*Math.PI*bin*i/fftSize;re+=win[i]*Math.cos(a);im-=win[i]*Math.sin(a);}
+      const mag=Math.sqrt(re*re+im*im);
+      const midi=Math.round(12*Math.log2(freq/440)+69);
+      if(midi>=0)chroma[((midi%12)+12)%12]+=mag;
+    }
   }
-}
-
-function drawStereoFan(canvas: HTMLCanvasElement, w: StereoWidth) {
-  const ctx = canvas.getContext("2d"); if (!ctx) return;
-  const { width: cw, height: ch } = canvas;
-  ctx.clearRect(0, 0, cw, ch);
-  const cx = cw / 2, cy = ch + 12, r = Math.min(cw, ch) * 1.12;
-  const spread = { narrow: 22, standard: 55, wide: 85 }[w];
-  const toRad = (d: number) => (d * Math.PI) / 180;
-
-  // Arcs
-  for (const [f, a] of [[0.78, 0.18], [0.52, 0.1]] as [number, number][]) {
-    ctx.strokeStyle = `rgba(99,179,154,${a})`; ctx.lineWidth = 1; ctx.beginPath();
-    ctx.arc(cx, cy, r * f, toRad(-90 - spread), toRad(-90 + spread)); ctx.stroke();
+  let bestCorr=-Infinity,bestNote=0,bestMode:"major"|"minor"="major";
+  for(let shift=0;shift<12;shift++){
+    const rot=[...chroma.slice(shift),...chroma.slice(0,shift)];
+    const maj=correlate(rot,MAJOR_PROFILE),min=correlate(rot,MINOR_PROFILE);
+    if(maj>bestCorr){bestCorr=maj;bestNote=shift;bestMode="major";}
+    if(min>bestCorr){bestCorr=min;bestNote=shift;bestMode="minor";}
   }
 
-  // Rays
-  const rays = 11;
-  for (let i = 0; i < rays; i++) {
-    const t = i / (rays - 1), ang = toRad(-90 - spread + t * spread * 2), center = i === Math.floor(rays / 2);
-    ctx.strokeStyle = `rgba(99,179,154,${center ? 0.9 : 0.15 + (1 - Math.abs(t - 0.5) * 2) * 0.3})`;
-    ctx.lineWidth = center ? 2 : 1;
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r); ctx.stroke();
-  }
+  // BPM
+  const frameSize=512,hopSize=256,frames:number[]=[];
+  const limit=Math.min(data.length,sr*90);
+  for(let i=0;i+frameSize<limit;i+=hopSize){let e=0;for(let j=0;j<frameSize;j++)e+=data[i+j]*data[i+j];frames.push(e/frameSize);}
+  const maxE=Math.max(...frames);const norm=frames.map(e=>e/(maxE+1e-9));
+  const minLag=Math.round(60*sr/(180*hopSize)),maxLag=Math.round(60*sr/(40*hopSize));
+  let bestC=-Infinity,bestLag=minLag;
+  for(let lag=minLag;lag<=maxLag&&lag<frames.length/2;lag++){let c=0;const n=frames.length-lag;for(let i=0;i<n;i++)c+=norm[i]*norm[i+lag];c/=n;if(c>bestC){bestC=c;bestLag=lag;}}
+  let bpm=(60*sr)/(bestLag*hopSize);while(bpm>175)bpm/=2;while(bpm<80)bpm*=2;bpm=Math.round(bpm);
 
-  ctx.fillStyle = "#63B39A"; ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "rgba(99,179,154,0.75)"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center";
-  ctx.fillText({ narrow: "22°", standard: "55°", wide: "85°" }[w], cx, 14);
+  // Pitch
+  const mid=Math.floor(data.length/2),minP=Math.floor(sr/1800),maxP=Math.floor(sr/80);
+  let pc=-1,pp=maxP;
+  for(let p=minP;p<=maxP;p++){let c=0;for(let i=0;i<2048-p;i++)c+=data[mid+i]*data[mid+i+p];if(c>pc){pc=c;pp=p;}}
+  const pitch=Math.round(sr/pp);
+
+  // Danceability
+  const energy=computeStats(buf).lufs;
+  const bpmScore=Math.max(0,100-Math.abs(bpm-128)*1.5);
+  const energyScore=Math.max(0,Math.min(100,((energy+40)/40)*100));
+  const danceability=Math.round(0.45*bpmScore+0.55*energyScore);
+
+  return { bpm, keyNote: NOTE_NAMES[bestNote], keyMode: bestMode, pitch, danceability, ...stats };
 }
-
-function drawSpectrum(canvas: HTMLCanvasElement, lvl: NoiseLevel) {
-  const ctx = canvas.getContext("2d"); if (!ctx) return;
-  const { width: w, height: h } = canvas;
-  ctx.clearRect(0, 0, w, h);
-  const bins = 30, flrRatio = { low: 0.12, medium: 0.28, high: 0.48 }[lvl];
-  const bw = Math.max(1, w / bins - 2), flrH = flrRatio * h * 0.82;
-  const shape = Array.from({ length: bins }, (_, i) => {
-    const x = i / bins;
-    const d1 = x - 0.25, d2 = x - 0.55, d3 = x - 0.8;
-    return Math.exp(-(d1 * d1) / 0.06) * 0.9 + Math.exp(-(d2 * d2) / 0.05) * 0.65
-         + Math.exp(-(d3 * d3) / 0.04) * 0.3 + 0.12;
-  });
-  const maxS = Math.max(...shape);
-
-  ctx.setLineDash([3, 3]); ctx.strokeStyle = "rgba(239,68,68,0.42)"; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, h - flrH); ctx.lineTo(w, h - flrH); ctx.stroke(); ctx.setLineDash([]);
-
-  shape.forEach((v, i) => {
-    const x = i * (w / bins), barH = Math.max(2, (v / maxS) * h * 0.82), y = h - barH, above = barH > flrH;
-    const g = ctx.createLinearGradient(0, y, 0, h);
-    g.addColorStop(0, above ? "rgba(99,179,154,0.85)" : "rgba(99,179,154,0.18)");
-    g.addColorStop(1, above ? "rgba(99,179,154,0.25)" : "rgba(99,179,154,0.04)");
-    ctx.fillStyle = g; ctx.fillRect(x, y, bw, barH);
-    if (above) { ctx.fillStyle = "#63B39A"; ctx.beginPath(); ctx.arc(x + bw / 2, y, 1.5, 0, Math.PI * 2); ctx.fill(); }
-  });
-}
-
-// ─── Master audio processing ──────────────────────────────────────────────────
 
 async function masterAudio(
   buf: AudioBuffer,
-  settings: { targetLUFS: number; stereoFactor: number; noiseCutoff: number; highShelf: boolean; limiter: boolean },
-  statsIn: BufferStats,
-  onStage: (s: Stage) => void
-): Promise<{ blob: Blob; masteredBuffer: AudioBuffer; statsOut: BufferStats }> {
-  onStage("analyzing");
-  const gainLinear = Math.pow(10, (settings.targetLUFS - statsIn.lufs) / 20);
+  settings: Settings,
+  statsIn: { lufs: number; peak: number; dr: number },
+  onStage: (s: string) => void
+): Promise<MasterResult> {
+  onStage("Analyzing…");
+  const sr = buf.sampleRate, ch = buf.numberOfChannels;
+  const ctx = new OfflineAudioContext(ch, buf.length, sr);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
 
-  onStage("eq");
-  const off = new OfflineAudioContext(buf.numberOfChannels, buf.length, buf.sampleRate);
-  const src = off.createBufferSource(); src.buffer = buf;
-  let last: AudioNode = src;
+  let node: AudioNode = src;
 
-  if (settings.noiseCutoff > 0) {
-    const hp = off.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = settings.noiseCutoff; hp.Q.value = 0.6;
-    last.connect(hp); last = hp;
+  onStage("Applying EQ…");
+  if (settings.lowCut) {
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass"; hp.frequency.value = 30; hp.Q.value = 0.7;
+    node.connect(hp); node = hp;
+  }
+  if (settings.autoEQ) {
+    // 5-band EQ from eqBands
+    const freqs = [60, 250, 1000, 4000, 12000];
+    settings.eqBands.forEach((gain, i) => {
+      const f = ctx.createBiquadFilter();
+      f.type = i === 0 ? "lowshelf" : i === 4 ? "highshelf" : "peaking";
+      f.frequency.value = freqs[i]; f.gain.value = gain; f.Q.value = 1;
+      node.connect(f); node = f;
+    });
   }
   if (settings.highShelf) {
-    const hs = off.createBiquadFilter(); hs.type = "highshelf"; hs.frequency.value = 12000; hs.gain.value = 1.5;
-    last.connect(hs); last = hs;
+    const hs = ctx.createBiquadFilter();
+    hs.type = "highshelf"; hs.frequency.value = 8000; hs.gain.value = 2;
+    node.connect(hs); node = hs;
   }
-  const gn = off.createGain(); gn.gain.value = gainLinear; last.connect(gn); gn.connect(off.destination); src.start();
+  if (settings.noiseLevel !== "low") {
+    const nr = ctx.createBiquadFilter();
+    nr.type = "highpass"; nr.frequency.value = NOISE_CUTOFF[settings.noiseLevel]; nr.Q.value = 0.5;
+    node.connect(nr); node = nr;
+  }
 
-  onStage("limiting");
-  const proc = await off.startRendering();
-  const LIMIT = settings.limiter ? Math.pow(10, -0.3 / 20) : 1;
+  onStage("Applying Gain…");
+  const targetLUFS = PLATFORM_LUFS[settings.platform] + INTENSITY_OFFSET[settings.intensity];
+  const gainDb = targetLUFS - statsIn.lufs;
+  const gainLin = Math.pow(10, gainDb / 20);
+  const gainNode = ctx.createGain();
+  gainNode.gain.value = Math.min(gainLin, 6);
+  node.connect(gainNode); node = gainNode;
+  node.connect(ctx.destination);
+  src.start(0);
+
+  onStage("Mastering…");
+  const rendered = await ctx.startRendering();
+
+  // True-peak limiting
+  const L = rendered.getChannelData(0);
+  const R = rendered.numberOfChannels > 1 ? rendered.getChannelData(1) : L;
+  const tpLimit = Math.pow(10, -0.3 / 20);
   let peak = 0;
-  for (let c = 0; c < proc.numberOfChannels; c++) {
-    const d = proc.getChannelData(c); for (let i = 0; i < d.length; i++) if (Math.abs(d[i]) > peak) peak = Math.abs(d[i]);
-  }
-  const ps = peak > LIMIT ? LIMIT / peak : 1;
+  for (let i = 0; i < L.length; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
+  const peakScale = peak > tpLimit ? tpLimit / peak : 1;
 
-  onStage("encoding");
-  const nc = proc.numberOfChannels, ns = proc.length;
-  const dBytes = ns * nc * 2, wb = new ArrayBuffer(44 + dBytes), v = new DataView(wb);
-  const ws = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-  ws(0, "RIFF"); v.setUint32(4, 36 + dBytes, true); ws(8, "WAVE"); ws(12, "fmt ");
-  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, nc, true);
-  v.setUint32(24, proc.sampleRate, true); v.setUint32(28, proc.sampleRate * nc * 2, true);
-  v.setUint16(32, nc * 2, true); v.setUint16(34, 16, true); ws(36, "data"); v.setUint32(40, dBytes, true);
-
-  let o = 44; const sf = settings.stereoFactor;
-  for (let i = 0; i < ns; i++) {
-    if (nc === 1) {
-      const s = Math.max(-1, Math.min(1, proc.getChannelData(0)[i] * ps));
-      v.setInt16(o, s < 0 ? s * 32768 : s * 32767, true); o += 2;
-    } else {
-      const L = proc.getChannelData(0)[i], R = proc.getChannelData(1)[i];
-      const mid = (L + R) / 2, side = ((L - R) / 2) * sf;
-      const Lw = Math.max(-1, Math.min(1, (mid + side) * ps)), Rw = Math.max(-1, Math.min(1, (mid - side) * ps));
-      v.setInt16(o, Lw < 0 ? Lw * 32768 : Lw * 32767, true); o += 2;
-      v.setInt16(o, Rw < 0 ? Rw * 32768 : Rw * 32767, true); o += 2;
-    }
+  // Stereo widening + WAV encode
+  onStage("Encoding…");
+  const sf = STEREO_FACTOR[settings.stereoWidth];
+  const outBuf = new AudioBuffer({ numberOfChannels: 2, length: rendered.length, sampleRate: sr });
+  const outL = outBuf.getChannelData(0), outR = outBuf.getChannelData(1);
+  for (let i = 0; i < rendered.length; i++) {
+    const l = L[i], r = (rendered.numberOfChannels > 1 ? rendered.getChannelData(1)[i] : L[i]);
+    const mid = (l + r) / 2, side = ((l - r) / 2) * sf;
+    outL[i] = (mid + side) * peakScale;
+    outR[i] = (mid - side) * peakScale;
   }
-  const blob = new Blob([wb], { type: "audio/wav" });
-  return { blob, masteredBuffer: proc, statsOut: computeStats(proc) };
+
+  const wavBytes = encodeWAV(outBuf);
+  const blob = new Blob([wavBytes], { type: "audio/wav" });
+  const url = URL.createObjectURL(blob);
+  const stats = computeStats(outBuf);
+  onStage("Done!");
+  return { url, buffer: outBuf, stats };
 }
 
-// ─── Icon components ──────────────────────────────────────────────────────────
+function encodeWAV(buf: AudioBuffer): ArrayBuffer {
+  const numCh = buf.numberOfChannels, sr = buf.sampleRate, numSamples = buf.length;
+  const bitsPerSample = 16, bytesPerSample = bitsPerSample / 8;
+  const blockAlign = numCh * bytesPerSample, byteRate = sr * blockAlign;
+  const dataBytes = numSamples * blockAlign;
+  const ab = new ArrayBuffer(44 + dataBytes);
+  const view = new DataView(ab);
+  const write = (o: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+  write(0, "RIFF"); view.setUint32(4, 36 + dataBytes, true); write(8, "WAVE");
+  write(12, "fmt "); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+  view.setUint16(22, numCh, true); view.setUint32(24, sr, true); view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true); view.setUint16(34, bitsPerSample, true);
+  write(36, "data"); view.setUint32(40, dataBytes, true);
+  let offset = 44;
+  const channels = Array.from({ length: numCh }, (_, c) => buf.getChannelData(c));
+  for (let i = 0; i < numSamples; i++) {
+    for (let c = 0; c < numCh; c++) {
+      const s = Math.max(-1, Math.min(1, channels[c][i]));
+      view.setInt16(offset, s < 0 ? s * 32768 : s * 32767, true); offset += 2;
+    }
+  }
+  return ab;
+}
 
-const PlayIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v14l11-7z"/></svg>;
-const PauseIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/></svg>;
-const SkipBackIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M19 20 9 12 19 4z"/><line x1="5" y1="19" x2="5" y2="5"/></svg>;
-const SkipFwdIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M5 4l10 8-10 8z"/><line x1="19" y1="5" x2="19" y2="19"/></svg>;
-const DownloadIcon = () => <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
-const EqIcon = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="2" y="9" width="3.5" height="12" rx="1.75" opacity="0.45"/><rect x="7.5" y="4" width="3.5" height="17" rx="1.75"/><rect x="13" y="7" width="3.5" height="14" rx="1.75" opacity="0.78"/><rect x="18.5" y="2" width="3.5" height="19" rx="1.75" opacity="0.55"/></svg>;
+// ── Canvas helpers ─────────────────────────────────────────────────────────
+function drawWaveform(canvas: HTMLCanvasElement, buf: AudioBuffer, color: string, progress = 0) {
+  const ctx = canvas.getContext("2d")!;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0, 0, w, h);
+  const data = buf.getChannelData(0);
+  const bins = Math.floor(w / 3);
+  const step = Math.floor(data.length / bins);
+  for (let i = 0; i < bins; i++) {
+    let max = 0;
+    for (let j = 0; j < step; j++) max = Math.max(max, Math.abs(data[i * step + j] || 0));
+    const bh = Math.max(2, max * h * 0.88);
+    const x = i * (w / bins), bw = w / bins - 1;
+    const played = i / bins < progress;
+    ctx.fillStyle = played ? color : color.replace(")", ",0.3)").replace("rgb", "rgba");
+    ctx.beginPath();
+    (ctx as CanvasRenderingContext2D & { roundRect: (...a: number[]) => void }).roundRect(x, (h - bh) / 2, bw, bh, 1);
+    ctx.fill();
+  }
+}
 
-// ─── Toggle switch ────────────────────────────────────────────────────────────
+function drawStereoFan(canvas: HTMLCanvasElement, width: StereoWidth) {
+  const ctx = canvas.getContext("2d")!;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h * 0.88;
+  const sf = STEREO_FACTOR[width];
+  const maxAngle = Math.min(Math.PI * 0.45, (sf / 1.75) * Math.PI * 0.45);
+  const r = Math.min(w, h) * 0.8;
+  const numRays = 14;
+  for (let i = 0; i <= numRays; i++) {
+    const t = i / numRays;
+    const angle = -Math.PI / 2 + (t - 0.5) * 2 * maxAngle;
+    const fade = Math.cos((t - 0.5) * Math.PI) ** 2;
+    const x2 = cx + r * Math.cos(angle), y2 = cy + r * Math.sin(angle);
+    const grad = ctx.createLinearGradient(cx, cy, x2, y2);
+    grad.addColorStop(0, `rgba(99,179,154,${0.55 * fade})`);
+    grad.addColorStop(1, `rgba(99,179,154,0)`);
+    ctx.strokeStyle = grad; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  // Arc
+  const arcR = r * 0.82;
+  const a1 = -Math.PI / 2 - maxAngle, a2 = -Math.PI / 2 + maxAngle;
+  ctx.beginPath(); ctx.arc(cx, cy, arcR, a1, a2);
+  ctx.strokeStyle = "rgba(99,179,154,0.5)"; ctx.lineWidth = 1.5; ctx.stroke();
+  // Center dot
+  ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.fillStyle = "#63B39A"; ctx.fill();
+  // Width label
+  ctx.fillStyle = "rgba(99,179,154,0.8)"; ctx.font = `bold 11px var(--font-mono,monospace)`;
+  ctx.textAlign = "center";
+  ctx.fillText(`${Math.round(sf * 100)}%`, cx, cy - arcR - 8);
+}
 
+function drawSpectrum(canvas: HTMLCanvasElement, level: NoiseLevel) {
+  const ctx = canvas.getContext("2d")!;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const bins = 28;
+  const flrRatio = { low: 0.12, medium: 0.28, high: 0.48 }[level];
+  const flrH = flrRatio * h * 0.82;
+  const bw = Math.max(1, w / bins - 2);
+  // Noise floor line
+  ctx.setLineDash([3, 3]); ctx.strokeStyle = "rgba(239,68,68,0.42)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h - flrH); ctx.lineTo(w, h - flrH); ctx.stroke(); ctx.setLineDash([]);
+  for (let i = 0; i < bins; i++) {
+    const x = i / bins;
+    const d1 = x - 0.25, d2 = x - 0.55, d3 = x - 0.8;
+    const v = Math.exp(-(d1*d1)/0.06)*0.9 + Math.exp(-(d2*d2)/0.05)*0.65 + Math.exp(-(d3*d3)/0.04)*0.3 + 0.12;
+    const maxS = 1.85; // approximate max
+    const barH = Math.max(2, (v / maxS) * h * 0.82), y = h - barH;
+    const above = barH > flrH;
+    const grad = ctx.createLinearGradient(0, y, 0, h);
+    grad.addColorStop(0, above ? "rgba(99,179,154,0.8)" : "rgba(239,68,68,0.6)");
+    grad.addColorStop(1, above ? "rgba(99,179,154,0.2)" : "rgba(239,68,68,0.2)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    (ctx as CanvasRenderingContext2D & { roundRect: (...a: number[]) => void }).roundRect(i * (w / bins), y, bw, barH, 2);
+    ctx.fill();
+    ctx.beginPath(); ctx.arc(i * (w / bins) + bw / 2, y, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = above ? "#7ECCA8" : "#ef4444"; ctx.fill();
+  }
+}
+
+function drawEQ(canvas: HTMLCanvasElement, bands: [number,number,number,number,number]) {
+  const ctx = canvas.getContext("2d")!;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  // Grid
+  ctx.strokeStyle = "rgba(99,179,154,0.08)"; ctx.lineWidth = 1;
+  for (let i = 1; i < 4; i++) {
+    ctx.beginPath(); ctx.moveTo(0, h * i / 4); ctx.lineTo(w, h * i / 4); ctx.stroke();
+  }
+  // 0dB line
+  ctx.strokeStyle = "rgba(99,179,154,0.2)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+  // Freq labels
+  const freqLabels = ["60", "250", "1k", "4k", "12k"];
+  ctx.fillStyle = "rgba(139,147,168,0.6)"; ctx.font = "9px monospace"; ctx.textAlign = "center";
+  const xs = [0.1, 0.3, 0.5, 0.7, 0.9];
+  xs.forEach((x, i) => ctx.fillText(freqLabels[i], x * w, h - 4));
+  // Curve
+  const pts = xs.map((x, i) => ({ x: x * w, y: h / 2 - (bands[i] / 12) * (h * 0.45) }));
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, "rgba(99,179,154,0.25)"); grad.addColorStop(1, "rgba(99,179,154,0)");
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2);
+  ctx.lineTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const cpx = (pts[i-1].x + pts[i].x) / 2;
+    ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
+  }
+  ctx.lineTo(w, h / 2);
+  ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const cpx = (pts[i-1].x + pts[i].x) / 2;
+    ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
+  }
+  ctx.strokeStyle = "#63B39A"; ctx.lineWidth = 2; ctx.stroke();
+  // Handles
+  pts.forEach((p, i) => {
+    ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = "#63B39A"; ctx.fill();
+    ctx.strokeStyle = "white"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = "white"; ctx.font = `bold 8px monospace`; ctx.textAlign = "center";
+    ctx.fillText(bands[i] >= 0 ? `+${bands[i]}` : `${bands[i]}`, p.x, p.y - 8);
+  });
+}
+
+function drawLoudnessHistory(canvas: HTMLCanvasElement, history: number[]) {
+  const ctx = canvas.getContext("2d")!;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  if (history.length < 2) return;
+  const minL = -30, maxL = 0;
+  const toY = (l: number) => h - ((l - minL) / (maxL - minL)) * h * 0.85 - 6;
+  // Grid lines
+  [-24, -18, -14, -9, -6].forEach(l => {
+    const y = toY(l);
+    ctx.strokeStyle = l === -14 ? "rgba(99,179,154,0.3)" : "rgba(139,147,168,0.12)";
+    ctx.lineWidth = l === -14 ? 1.5 : 1; ctx.setLineDash(l === -14 ? [4, 4] : []);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(139,147,168,0.5)"; ctx.font = "8px monospace"; ctx.textAlign = "right";
+    ctx.fillText(`${l}`, w - 2, y - 2);
+  });
+  const step = w / (history.length - 1);
+  const pts = history.map((l, i) => ({ x: i * step, y: toY(l) }));
+  // Fill
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, "rgba(99,179,154,0.22)"); grad.addColorStop(1, "rgba(99,179,154,0)");
+  ctx.beginPath();
+  ctx.moveTo(0, h); ctx.lineTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const cpx = (pts[i-1].x + pts[i].x) / 2;
+    ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
+  }
+  ctx.lineTo(pts[pts.length-1].x, h); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  // Line
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const cpx = (pts[i-1].x + pts[i].x) / 2;
+    ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
+  }
+  ctx.strokeStyle = "#63B39A"; ctx.lineWidth = 2; ctx.stroke();
+}
+
+function computeLoudnessHistory(buf: AudioBuffer): number[] {
+  const data = buf.getChannelData(0);
+  const sr = buf.sampleRate;
+  const segLen = Math.floor(sr * 1.5);
+  const result: number[] = [];
+  for (let i = 0; i + segLen < data.length; i += segLen) {
+    let sq = 0;
+    for (let j = 0; j < segLen; j++) sq += data[i + j] * data[i + j];
+    const rms = Math.sqrt(sq / segLen);
+    result.push(Math.round((20 * Math.log10(rms + 1e-9) - 0.691) * 10) / 10);
+  }
+  return result;
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────
 function ToggleSwitch({ label, value, onChange, desc }: { label: string; value: boolean; onChange: (v: boolean) => void; desc?: string }) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-[var(--color-grid-500)] last:border-0">
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
       <div>
-        <div className="text-sm font-medium text-[var(--color-foreground)]">{label}</div>
-        {desc && <div className="text-xs text-[var(--color-muted-2)] mt-0.5">{desc}</div>}
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-foreground)" }}>{label}</div>
+        {desc && <div style={{ fontSize: 11, color: "var(--color-muted-2)", marginTop: 1 }}>{desc}</div>}
       </div>
-      <button
-        role="switch"
-        aria-checked={value}
-        onClick={() => onChange(!value)}
-        className="relative flex-shrink-0 w-11 h-6 rounded-full transition-all duration-200 focus:outline-none"
-        style={{ background: value ? "var(--color-deep-teal)" : "var(--color-grid-500)" }}
-      >
-        <span
-          className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
-          style={{ transform: value ? "translateX(20px)" : "translateX(0)" }}
-        />
+      <button onClick={() => onChange(!value)} className={`toggle-track ${value ? "on" : "off"}`}>
+        <div className={`toggle-thumb ${value ? "on" : "off"}`} />
       </button>
     </div>
   );
 }
 
-// ─── Level selector (Low / Medium / High) ────────────────────────────────────
-
-function LevelSelector<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: T[] }) {
+function LevelSelector<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: T[]; label?: string }) {
   const idx = options.indexOf(value);
+  const prev = () => idx > 0 && onChange(options[idx - 1]);
+  const next = () => idx < options.length - 1 && onChange(options[idx + 1]);
   return (
-    <div className="flex items-center gap-2 mt-3">
-      <button
-        onClick={() => idx > 0 && onChange(options[idx - 1])}
-        disabled={idx === 0}
-        className="w-7 h-7 rounded-lg border border-[var(--color-grid-500)] text-[var(--color-muted)] text-sm flex items-center justify-center hover:border-[var(--color-highlight)] hover:text-[var(--color-highlight)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-      >−</button>
-      <div className="flex-1 flex gap-1">
-        {options.map(o => (
-          <button
-            key={o}
-            onClick={() => onChange(o)}
-            className="flex-1 py-1 rounded-lg text-xs font-semibold font-mono capitalize transition-all"
-            style={o === value
-              ? { background: "var(--color-deep-teal)", color: "white" }
-              : { background: "var(--color-grid-300)", color: "var(--color-muted)" }
-            }
-          >{o}</button>
-        ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {label && <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-muted-2)" }}>{label}</div>}
+      <div className="level-selector">
+        <button onClick={prev} className="level-btn" disabled={idx === 0}>−</button>
+        <span className="level-label">{value.charAt(0).toUpperCase() + value.slice(1)}</span>
+        <button onClick={next} className="level-btn" disabled={idx === options.length - 1}>+</button>
       </div>
-      <button
-        onClick={() => idx < options.length - 1 && onChange(options[idx + 1])}
-        disabled={idx === options.length - 1}
-        className="w-7 h-7 rounded-lg border border-[var(--color-grid-500)] text-[var(--color-muted)] text-sm flex items-center justify-center hover:border-[var(--color-highlight)] hover:text-[var(--color-highlight)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-      >+</button>
     </div>
   );
 }
 
-// ─── Waveform mini player (used in Before/After) ──────────────────────────────
-
-interface MiniPlayerProps { buffer: AudioBuffer; url: string; label: string; accentColor: string; isActive: boolean; onActivate: () => void; stats: BufferStats; }
-
-function MiniPlayer({ buffer, url, label, accentColor, isActive, onActivate, stats }: MiniPlayerProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const rafRef = useRef<number>(0);
+function MiniPlayer({ buffer, url, label, accentColor, isActive, onActivate, stats }: {
+  buffer: AudioBuffer; url: string; label: string; accentColor: string;
+  isActive: boolean; onActivate: () => void;
+  stats: { lufs: number; peak: number; dr: number };
+}) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-
-  useEffect(() => { const c = canvasRef.current; if (c) drawWaveform(c, buffer, accentColor, progress); }, [buffer, accentColor, progress]);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const srcRef = useRef<AudioBufferSourceNode | null>(null);
+  const ctxRef = useRef<AudioContext | null>(null);
+  const startRef = useRef(0);
+  const rafRef = useRef(0);
 
   useEffect(() => {
-    if (!playing) return;
-    const audio = audioRef.current; if (!audio) return;
+    const canvas = canvasRef.current;
+    if (canvas) drawWaveform(canvas, buffer, accentColor, progress);
+  }, [buffer, accentColor, progress]);
+
+  const stop = () => {
+    srcRef.current?.stop(); srcRef.current = null;
+    if (ctxRef.current) { ctxRef.current.close(); ctxRef.current = null; }
+    cancelAnimationFrame(rafRef.current);
+    setPlaying(false); setProgress(0);
+  };
+
+  const toggle = () => {
+    if (playing) { stop(); return; }
+    onActivate();
+    const audioCtx = new AudioContext();
+    ctxRef.current = audioCtx;
+    const src = audioCtx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(audioCtx.destination);
+    srcRef.current = src;
+    startRef.current = audioCtx.currentTime;
+    src.start(0);
+    src.onended = () => { setPlaying(false); setProgress(0); };
+    setPlaying(true);
     const tick = () => {
-      if (audio.duration > 0) { setProgress(audio.currentTime / audio.duration); setCurrentTime(audio.currentTime); }
-      rafRef.current = requestAnimationFrame(tick);
+      if (!ctxRef.current) return;
+      const elapsed = ctxRef.current.currentTime - startRef.current;
+      setProgress(elapsed / buffer.duration);
+      if (elapsed < buffer.duration) rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [playing]);
+  };
+
+  useEffect(() => { if (!isActive && playing) stop(); }, [isActive]);
+  useEffect(() => () => stop(), []);
+
+  return (
+    <div style={{ border: `1px solid ${accentColor}33`, borderRadius: 16, padding: "14px 16px", background: `${accentColor}06` }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", color: accentColor }}>{label}</span>
+        <button onClick={toggle} className={`player-btn ${playing ? "play" : ""}`} style={{ background: playing ? accentColor : `${accentColor}18`, borderColor: `${accentColor}33` }}>
+          {playing
+            ? <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            : <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+          }
+        </button>
+      </div>
+      <div className="waveform-hit" style={{ background: `${accentColor}08`, height: 52 }}>
+        <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
+        <div className="waveform-playhead" style={{ left: `${progress * 100}%`, background: accentColor }} />
+      </div>
+      <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+        {[["LUFS", stats.lufs], ["Peak", stats.peak], ["DR", stats.dr]].map(([k, v]) => (
+          <div key={String(k)} style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-muted-2)" }}>{k}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--color-foreground)" }}>{v}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface MetadataState { title: string; artist: string; album: string; year: string; [key: string]: string; }
+function MetadataModal({ metadata, setMetadata, onClose }: {
+  metadata: MetadataState;
+  setMetadata: (m: MetadataState) => void;
+  onClose: () => void;
+}) {
+  const fields = [
+    { key: "title", label: "Title" },
+    { key: "artist", label: "Artist" },
+    { key: "album", label: "Album" },
+    { key: "year", label: "Year" },
+  ];
+  return (
+    <div className="metadata-modal-overlay" onClick={onClose}>
+      <div className="glass-card metadata-modal" onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <h3 style={{ fontWeight: 700, fontSize: 17, color: "var(--color-foreground)" }}>Edit Metadata</h3>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "transparent", color: "var(--color-muted)", cursor: "pointer", fontSize: 16 }}>×</button>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {fields.map(f => (
+            <div key={f.key}>
+              <label style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-muted-2)", display: "block", marginBottom: 5 }}>{f.label}</label>
+              <input type={f.key === "year" ? "number" : "text"} className="meta-input"
+                value={metadata[f.key] || ""} onChange={e => setMetadata({ ...metadata, [f.key]: e.target.value })} />
+            </div>
+          ))}
+        </div>
+        <button onClick={onClose}
+          style={{ marginTop: 20, width: "100%", padding: "11px", borderRadius: 10, background: "var(--color-deep-teal)", color: "white", fontWeight: 600, fontSize: 14, border: "none", cursor: "pointer" }}>
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── EQ Visualizer with interactive drag ───────────────────────────────────
+function EQVisualizer({ bands, onChange }: { bands: [number,number,number,number,number]; onChange: (b: [number,number,number,number,number]) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dragBand = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!isActive && playing) { audioRef.current?.pause(); setPlaying(false); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive]);
+    const canvas = canvasRef.current;
+    if (canvas) drawEQ(canvas, bands);
+  }, [bands]);
 
-  const togglePlay = () => {
-    const a = audioRef.current; if (!a) return;
-    if (playing) { a.pause(); setPlaying(false); } else { onActivate(); a.play(); setPlaying(true); }
+  const getXS = (w: number) => [0.1, 0.3, 0.5, 0.7, 0.9].map(x => x * w);
+
+  const onMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const w = canvas.width;
+    const xs = getXS(w);
+    dragBand.current = xs.findIndex(x => Math.abs(mx - x) < 18);
   };
 
-  const seek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const a = audioRef.current; if (!a || !duration) return;
-    const r = (e.clientX - e.currentTarget.getBoundingClientRect().left) / e.currentTarget.offsetWidth;
-    a.currentTime = Math.max(0, Math.min(1, r)) * duration;
-    setProgress(Math.max(0, Math.min(1, r)));
+  const onMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (dragBand.current === null) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const h = canvas.height;
+    const gain = Math.round(((h / 2 - my) / (h * 0.45)) * 12);
+    const clamped = Math.max(-12, Math.min(12, gain));
+    const nb: [number,number,number,number,number] = [...bands] as [number,number,number,number,number];
+    nb[dragBand.current] = clamped;
+    onChange(nb);
   };
+
+  const onMouseUp = () => { dragBand.current = null; };
 
   return (
-    <div className={`glass-card rounded-2xl p-4 transition-all ${isActive ? "ring-2" : ""}`} style={isActive ? { "--tw-ring-color": accentColor } as React.CSSProperties : {}}>
-      <audio ref={audioRef} src={url} onLoadedMetadata={e => setDuration(e.currentTarget.duration)} onEnded={() => { setPlaying(false); setProgress(0); setCurrentTime(0); }} />
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-mono font-bold tracking-widest uppercase" style={{ color: accentColor }}>{label}</span>
-        <span className="font-mono text-xs text-[var(--color-muted-2)]">{fmtTime(currentTime)} / {fmtTime(duration)}</span>
-      </div>
-      <div className="relative rounded-xl overflow-hidden cursor-pointer mb-2" style={{ background: "var(--color-grid-300)" }} onClick={seek}>
-        <canvas ref={canvasRef} width={600} height={56} className="w-full block" style={{ height: "48px" }} />
-        <div className="absolute top-0 bottom-0 w-0.5 pointer-events-none" style={{ left: `${progress * 100}%`, background: accentColor }} />
-      </div>
-      <div className="flex items-center gap-2 mb-3">
-        <button onClick={togglePlay} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-85" style={{ background: accentColor, color: "white" }}>
-          {playing ? <PauseIcon /> : <PlayIcon />} {playing ? "Pause" : "Play"}
-        </button>
-        <div className="flex gap-2 ml-auto text-right">
-          <div><div className="text-xs text-[var(--color-muted-2)]">LUFS</div><div className="font-mono text-sm font-bold text-[var(--color-foreground)]">{stats.lufs.toFixed(1)}</div></div>
-          <div><div className="text-xs text-[var(--color-muted-2)]">Peak</div><div className="font-mono text-sm font-bold text-[var(--color-foreground)]">{stats.peak.toFixed(1)}</div></div>
-          <div><div className="text-xs text-[var(--color-muted-2)]">DR</div><div className="font-mono text-sm font-bold text-[var(--color-foreground)]">{stats.dr.toFixed(1)}</div></div>
-        </div>
-      </div>
+    <div className="eq-canvas-wrap" style={{ height: 110 }}>
+      <canvas ref={canvasRef} width={500} height={110}
+        style={{ width: "100%", height: 110, cursor: "ns-resize", display: "block" }}
+        onMouseDown={onMouseDown} onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp} onMouseLeave={onMouseUp} />
     </div>
   );
 }
 
-// ─── Metadata modal ───────────────────────────────────────────────────────────
-
-function MetadataModal({ metadata, setMetadata, onClose }: { metadata: Metadata; setMetadata: (m: Metadata) => void; onClose: () => void }) {
-  const [draft, setDraft] = useState(metadata);
-  const field = (key: keyof Metadata, label: string, placeholder: string) => (
-    <div>
-      <label className="block text-xs font-mono text-[var(--color-muted-2)] mb-1.5 tracking-wider uppercase">{label}</label>
-      <input
-        value={draft[key]}
-        onChange={e => setDraft(d => ({ ...d, [key]: e.target.value }))}
-        placeholder={placeholder}
-        className="w-full px-3 py-2.5 rounded-xl bg-[var(--color-grid-300)] border border-[var(--color-grid-500)] text-sm text-[var(--color-foreground)] placeholder-[var(--color-muted-2)] focus:border-[var(--color-highlight)] focus:outline-none transition-colors"
-      />
-    </div>
-  );
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}>
-      <div className="glass-card rounded-2xl p-6 w-full max-w-md" style={{ zIndex: 51 }}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-bold text-[var(--color-foreground)]">Edit Track Metadata</h3>
-          <button onClick={onClose} className="text-[var(--color-muted-2)] hover:text-[var(--color-foreground)] text-lg leading-none">✕</button>
-        </div>
-        <div className="space-y-4">
-          {field("title", "Title", "Track name")}
-          {field("artist", "Artist", "Artist name")}
-          {field("album", "Album", "Album or EP name")}
-          {field("year", "Year", new Date().getFullYear().toString())}
-        </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[var(--color-grid-500)] text-sm text-[var(--color-muted)] hover:border-[var(--color-highlight)] transition-all">Cancel</button>
-          <button onClick={() => { setMetadata(draft); onClose(); }} className="flex-1 py-2.5 rounded-xl bg-[var(--color-deep-teal)] text-white text-sm font-semibold hover:opacity-90 transition-opacity">Save Metadata</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
-
+// ── Main component ─────────────────────────────────────────────────────────
 export default function MasteringClient() {
-  // File + audio
+  // File state
   const [file, setFile] = useState<File | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [loadingAudio, setLoadingAudio] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Mastering settings
+  // Reference track
+  const [refFile, setRefFile] = useState<File | null>(null);
+  const [refAnalysis, setRefAnalysis] = useState<Analysis | null>(null);
+
+  // Settings
+  const [preset, setPreset] = useState<Preset>("streaming");
   const [intensity, setIntensity] = useState<Intensity>("medium");
   const [stereoWidth, setStereoWidth] = useState<StereoWidth>("standard");
-  const [noiseLevel, setNoiseLevel] = useState<NoiseLevel>("low");
+  const [noiseLevel, setNoiseLevel] = useState<NoiseLevel>("medium");
   const [autoEQ, setAutoEQ] = useState(true);
-  const [lowCut, setLowCut] = useState(true);
-  const [highShelf, setHighShelf] = useState(true);
+  const [lowCut, setLowCut] = useState(false);
+  const [highShelf, setHighShelf] = useState(false);
   const [limiter, setLimiter] = useState(true);
   const [platform, setPlatform] = useState<Platform>("spotify");
+  const [eqBands, setEqBands] = useState<[number,number,number,number,number]>([0,0,0,0,0]);
 
   // Processing
-  const [stage, setStage] = useState<Stage>("idle");
+  const [stage, setStage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<MasteringResult | null>(null);
+  const [result, setResult] = useState<MasterResult | null>(null);
+  const [loudnessHistory, setLoudnessHistory] = useState<number[]>([]);
 
-  // Playback state for WaveformPlayer
-  const mainCanvasRef = useRef<HTMLCanvasElement>(null);
-  const mainAudioRef = useRef<HTMLAudioElement>(null);
-  const mainRafRef = useRef<number>(0);
+  // Playback
   const [mainPlaying, setMainPlaying] = useState(false);
   const [mainProgress, setMainProgress] = useState(0);
   const [mainTime, setMainTime] = useState(0);
-  const [mainDuration, setMainDuration] = useState(0);
+  const [activePlayer, setActivePlayer] = useState<"main"|"before"|"after"|null>(null);
 
-  // Before/After
-  const [activePlayer, setActivePlayer] = useState<"original" | "mastered">("mastered");
-
-  // Metadata + download
+  // UI
   const [showMetadata, setShowMetadata] = useState(false);
-  const [metadata, setMetadata] = useState<Metadata>({ title: "", artist: "", album: "", year: "" });
+  const [metadata, setMetadata] = useState<MetadataState>({ title: "", artist: "", album: "", year: "" });
 
-  // Settings cards canvases
+  // Refs
+  const inputRef = useRef<HTMLInputElement>(null);
+  const refInputRef = useRef<HTMLInputElement>(null);
+  const mainCanvasRef = useRef<HTMLCanvasElement>(null);
   const stereoCanvasRef = useRef<HTMLCanvasElement>(null);
   const noiseCanvasRef = useRef<HTMLCanvasElement>(null);
-  const miniWaveRef = useRef<HTMLCanvasElement>(null);
+  const loudHistRef = useRef<HTMLCanvasElement>(null);
+  const mainSrcRef = useRef<AudioBufferSourceNode | null>(null);
+  const mainCtxRef = useRef<AudioContext | null>(null);
+  const mainStartRef = useRef(0);
+  const rafRef = useRef(0);
 
-  // Derived
   const targetLUFS = PLATFORM_LUFS[platform] + INTENSITY_OFFSET[intensity];
-  const isProcessing = stage !== "idle" && stage !== "done" && stage !== "error";
 
-  // ── File handling ────────────────────────────────────────────────────────────
+  const applyPreset = (p: Preset) => {
+    setPreset(p);
+    if (p === "custom") return;
+    const s = PRESETS[p];
+    setIntensity(s.intensity); setStereoWidth(s.stereoWidth); setNoiseLevel(s.noiseLevel);
+    setAutoEQ(s.autoEQ); setLowCut(s.lowCut); setHighShelf(s.highShelf); setLimiter(s.limiter);
+    setPlatform(s.platform); setEqBands(s.eqBands);
+  };
+
+  const markCustom = () => setPreset("custom");
+
+  // Canvases
+  useEffect(() => {
+    if (audioBuffer && mainCanvasRef.current) drawWaveform(mainCanvasRef.current, audioBuffer, "rgb(99,179,154)", mainProgress);
+  }, [audioBuffer, mainProgress]);
+
+  useEffect(() => {
+    if (stereoCanvasRef.current) drawStereoFan(stereoCanvasRef.current, stereoWidth);
+  }, [stereoWidth]);
+
+  useEffect(() => {
+    if (noiseCanvasRef.current) drawSpectrum(noiseCanvasRef.current, noiseLevel);
+  }, [noiseLevel]);
+
+  useEffect(() => {
+    if (loudHistRef.current && loudnessHistory.length > 0) drawLoudnessHistory(loudHistRef.current, loudnessHistory);
+  }, [loudnessHistory]);
+
+  const stopMain = useCallback(() => {
+    mainSrcRef.current?.stop(); mainSrcRef.current = null;
+    if (mainCtxRef.current) { mainCtxRef.current.close(); mainCtxRef.current = null; }
+    cancelAnimationFrame(rafRef.current);
+    setMainPlaying(false); setMainProgress(0); setMainTime(0);
+  }, []);
+
+  const toggleMain = useCallback(() => {
+    if (!audioBuffer) return;
+    if (mainPlaying) { stopMain(); return; }
+    setActivePlayer("main");
+    const audioCtx = new AudioContext();
+    mainCtxRef.current = audioCtx;
+    const src = audioCtx.createBufferSource();
+    src.buffer = audioBuffer; src.connect(audioCtx.destination);
+    mainSrcRef.current = src; mainStartRef.current = audioCtx.currentTime;
+    src.start(0); src.onended = () => { setMainPlaying(false); setMainProgress(0); setMainTime(0); };
+    setMainPlaying(true);
+    const tick = () => {
+      if (!mainCtxRef.current) return;
+      const el = mainCtxRef.current.currentTime - mainStartRef.current;
+      setMainProgress(el / audioBuffer.duration);
+      setMainTime(el);
+      if (el < audioBuffer.duration) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  }, [audioBuffer, mainPlaying, stopMain]);
+
+  const seekMain = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioBuffer || !mainCanvasRef.current) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    stopMain(); setMainProgress(pct); setMainTime(pct * audioBuffer.duration);
+  };
+
+  const fmt = (s: number) => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;
 
   const handleFile = useCallback(async (f: File) => {
-    if (!f.type.match(/audio\/(mpeg|wav|mp3|x-wav)/)) { setError("Please upload an MP3 or WAV file."); return; }
-    setFile(f); setError(null); setResult(null); setStage("idle");
-    setMainProgress(0); setMainTime(0); setMainDuration(0); setMainPlaying(false);
-    setOriginalUrl(URL.createObjectURL(f));
-    setLoadingAudio(true);
+    if (!f.type.match(/audio\//) && !f.name.match(/\.(mp3|wav|flac|ogg|aac)$/i)) {
+      setError("Please upload an MP3 or WAV file."); return;
+    }
+    setLoadingAudio(true); setError(null); setResult(null); setAnalysis(null);
     try {
       const ab = await f.arrayBuffer();
-      const ctx = new AudioContext();
-      const buf = await ctx.decodeAudioData(ab);
-      await ctx.close();
-      setAudioBuffer(buf);
-      // Prefill metadata from filename
-      const title = f.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
-      setMetadata(m => ({ ...m, title }));
-      const result = await analyzeBuffer(buf);
-      setAnalysis(result);
-    } catch (e) {
-      console.error(e); setError("Could not decode audio. Please try a different file.");
+      const audioCtx = new AudioContext();
+      const buffer = await audioCtx.decodeAudioData(ab);
+      await audioCtx.close();
+      const url = URL.createObjectURL(new Blob([ab], { type: f.type }));
+      setFile(f); setAudioBuffer(buffer); setOriginalUrl(url);
+      setMetadata((m: MetadataState) => ({ ...m, title: f.name.replace(/\.[^.]+$/, "") }));
+      const hist = computeLoudnessHistory(buffer);
+      setLoudnessHistory(hist);
+      const ana = await analyzeBuffer(buffer);
+      setAnalysis(ana);
+    } catch {
+      setError("Failed to decode audio. Please try an MP3 or WAV.");
     } finally {
       setLoadingAudio(false);
     }
   }, []);
 
-  const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); setDragOver(false);
-    const f = e.dataTransfer.files[0]; if (f) handleFile(f);
-  }, [handleFile]);
+  const handleRefFile = useCallback(async (f: File) => {
+    try {
+      const ab = await f.arrayBuffer();
+      const audioCtx = new AudioContext();
+      const buffer = await audioCtx.decodeAudioData(ab);
+      await audioCtx.close();
+      setRefFile(f);
+      const ana = await analyzeBuffer(buffer);
+      setRefAnalysis(ana);
+    } catch { /* ignore ref errors */ }
+  }, []);
 
-  // ── Canvas effects ────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    const c = mainCanvasRef.current; if (c && audioBuffer) drawWaveform(c, audioBuffer, "#63B39A", mainProgress);
-  }, [audioBuffer, mainProgress]);
-
-  useEffect(() => {
-    const c = stereoCanvasRef.current; if (c) drawStereoFan(c, stereoWidth);
-  }, [stereoWidth]);
-
-  useEffect(() => {
-    const c = noiseCanvasRef.current; if (c) drawSpectrum(c, noiseLevel);
-  }, [noiseLevel]);
-
-  useEffect(() => {
-    const c = miniWaveRef.current; if (c && audioBuffer) drawWaveform(c, audioBuffer, "#63B39A", 0);
-  }, [audioBuffer, intensity]);
-
-  // ── Main player ───────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!mainPlaying) return;
-    const audio = mainAudioRef.current; if (!audio) return;
-    const tick = () => {
-      if (audio.duration > 0) { setMainProgress(audio.currentTime / audio.duration); setMainTime(audio.currentTime); }
-      mainRafRef.current = requestAnimationFrame(tick);
-    };
-    mainRafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(mainRafRef.current);
-  }, [mainPlaying]);
-
-  const toggleMain = () => {
-    const a = mainAudioRef.current; if (!a) return;
-    if (mainPlaying) { a.pause(); setMainPlaying(false); } else { a.play(); setMainPlaying(true); }
-  };
-
-  const skipMain = (delta: number) => {
-    const a = mainAudioRef.current; if (!a) return;
-    a.currentTime = Math.max(0, Math.min(a.duration || 0, a.currentTime + delta));
-  };
-
-  const seekMain = (e: React.MouseEvent<HTMLDivElement>) => {
-    const a = mainAudioRef.current; if (!a || !mainDuration) return;
-    const r = (e.clientX - e.currentTarget.getBoundingClientRect().left) / e.currentTarget.offsetWidth;
-    a.currentTime = Math.max(0, Math.min(1, r)) * mainDuration;
-    setMainProgress(Math.max(0, Math.min(1, r)));
-  };
-
-  // ── Mastering ────────────────────────────────────────────────────────────────
-
-  const runMastering = async () => {
+  const doMaster = async () => {
     if (!audioBuffer || !analysis) return;
     setError(null); setResult(null);
-    const noiseCutoff = lowCut ? Math.max(NOISE_CUTOFF[noiseLevel], 30) : NOISE_CUTOFF[noiseLevel];
+    const settings: Settings = { intensity, stereoWidth, noiseLevel, autoEQ, lowCut, highShelf, limiter, platform, eqBands };
     try {
-      const { blob, masteredBuffer, statsOut } = await masterAudio(
-        audioBuffer,
-        { targetLUFS, stereoFactor: STEREO_FACTOR[stereoWidth], noiseCutoff, highShelf: highShelf && autoEQ, limiter },
-        { lufs: analysis.lufs, peak: analysis.peak, dr: analysis.dr },
-        setStage
-      );
-      setResult({ blob, masteredUrl: URL.createObjectURL(blob), masteredBuffer, statsOut });
-      setStage("done"); setActivePlayer("mastered");
-    } catch (e) {
-      console.error(e); setError("Mastering failed. Please try a different file."); setStage("error");
+      const r = await masterAudio(audioBuffer, settings, { lufs: analysis.lufs, peak: analysis.peak, dr: analysis.dr }, setStage);
+      setResult(r);
+      const hist = computeLoudnessHistory(r.buffer);
+      setLoudnessHistory(hist);
+    } catch (err) {
+      console.error(err);
+      setError("Mastering failed. Please try again.");
+    } finally {
+      setStage(null);
     }
   };
 
   const download = () => {
-    if (!result || !file) return;
+    if (!result) return;
     const a = document.createElement("a");
-    a.href = result.masteredUrl;
-    a.download = file.name.replace(/\.[^.]+$/, "") + "_mastered.wav";
+    a.href = result.url;
+    a.download = `${metadata.title || "mastered"}_master.wav`;
     a.click();
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (activePlayer !== "main" && mainPlaying) stopMain();
+  }, [activePlayer]);
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12">
-      {showMetadata && <MetadataModal metadata={metadata} setMetadata={setMetadata} onClose={() => setShowMetadata(false)} />}
+    <div className="tool-page-bg">
+      <div className="max-w-5xl mx-auto px-6 py-12">
 
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-2">
-        <div className="tool-icon"><EqIcon /></div>
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-foreground)]">Mastering Tool</h1>
-          <p className="text-xs text-[var(--color-muted-2)]">OfflineAudioContext · BiquadFilter · DynamicsCompressor · 100% local</p>
-        </div>
-        <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-[var(--color-soft-green)] text-[var(--color-deep-teal)] font-medium flex-shrink-0">Demo — Free</span>
-      </div>
-      <p className="text-sm text-[var(--color-muted)] leading-relaxed mb-8">
-        Upload an MP3 or WAV — we analyze BPM, key, and loudness, then master to your target platform standard. All processing is local; your audio never leaves your device.
-      </p>
-
-      {/* Upload zone */}
-      {!audioBuffer && !loadingAudio && (
-        <div
-          className={`upload-zone rounded-2xl p-10 flex flex-col items-center text-center cursor-pointer mb-6 ${dragOver ? "drag-over" : ""}`}
-          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={onDrop}
-          onClick={() => inputRef.current?.click()}
-        >
-          <input ref={inputRef} type="file" accept="audio/mpeg,audio/wav,.mp3,.wav" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-          <div className="tool-icon mb-4" style={{ color: "var(--color-deep-teal)" }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        {/* Header */}
+        <div className="mb-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="tool-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="2" y="9" width="3.5" height="12" rx="1.75" opacity="0.45"/>
+                <rect x="7.5" y="4" width="3.5" height="17" rx="1.75"/>
+                <rect x="13" y="7" width="3.5" height="14" rx="1.75" opacity="0.78"/>
+                <rect x="18.5" y="2" width="3.5" height="19" rx="1.75" opacity="0.55"/>
+              </svg>
+            </div>
+            <h1 style={{ fontSize: "clamp(1.5rem,3vw,2rem)", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--color-foreground)", lineHeight: 1.1 }}>
+              <span className="head-word-serif serif-accent">Mastering</span>{" "}
+              <span className="head-word-bold">Tool</span>
+            </h1>
+            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: "var(--color-soft-green)", color: "var(--color-deep-teal)", fontWeight: 700, flexShrink: 0 }}>Demo Free</span>
           </div>
-          <p className="font-semibold text-[var(--color-foreground)] mb-1">Drop your MP3 or WAV here</p>
-          <p className="text-sm text-[var(--color-muted-2)]">or click to browse</p>
+          <p style={{ fontSize: 14, color: "var(--color-muted)", lineHeight: 1.65, maxWidth: 540 }}>
+            Upload your track. Choose a preset. Master to streaming standards with EQ, stereo widening, and true-peak limiting — in your browser.
+          </p>
         </div>
-      )}
 
-      {/* Loading/analyzing */}
-      {loadingAudio && (
-        <div className="glass-card rounded-2xl p-8 flex flex-col items-center gap-4 mb-6">
-          <div className="w-10 h-10 border-2 border-[var(--color-highlight)] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-[var(--color-muted)]">Analyzing track — detecting BPM, key, and loudness…</p>
-        </div>
-      )}
-
-      {error && <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
-
-      {/* Main Waveform Player */}
-      {audioBuffer && analysis && !loadingAudio && originalUrl && (
-        <>
-          <div className="glass-card rounded-2xl p-5 mb-5">
-            <audio ref={mainAudioRef} src={originalUrl}
-              onLoadedMetadata={e => setMainDuration(e.currentTarget.duration)}
-              onEnded={() => { setMainPlaying(false); setMainProgress(0); setMainTime(0); }}
-            />
-            {/* Waveform canvas */}
-            <div className="relative rounded-xl overflow-hidden cursor-pointer mb-3"
-              style={{ background: "var(--color-grid-300)" }} onClick={seekMain}>
-              <canvas ref={mainCanvasRef} width={1200} height={110} className="w-full block" style={{ height: "88px" }} />
-              <div className="absolute top-0 bottom-0 w-0.5 pointer-events-none" style={{ left: `${mainProgress * 100}%`, background: "#63B39A" }} />
-            </div>
-
-            {/* Controls row */}
-            <div className="flex items-center gap-3 mb-4">
-              <button onClick={() => skipMain(-10)} className="w-9 h-9 flex items-center justify-center rounded-xl border border-[var(--color-grid-500)] text-[var(--color-muted)] hover:border-[var(--color-highlight)] hover:text-[var(--color-highlight)] transition-all">
-                <SkipBackIcon />
-              </button>
-              <button onClick={toggleMain} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:opacity-85" style={{ background: "#2F6B58", color: "white" }}>
-                {mainPlaying ? <PauseIcon /> : <PlayIcon />}
-                {mainPlaying ? "Pause" : "Play"}
-              </button>
-              <button onClick={() => skipMain(10)} className="w-9 h-9 flex items-center justify-center rounded-xl border border-[var(--color-grid-500)] text-[var(--color-muted)] hover:border-[var(--color-highlight)] hover:text-[var(--color-highlight)] transition-all">
-                <SkipFwdIcon />
-              </button>
-              <span className="font-mono text-sm text-[var(--color-muted-2)] ml-1">{fmtTime(mainTime)} / {fmtTime(mainDuration)}</span>
-              <span className="ml-auto text-xs text-[var(--color-muted-2)] truncate max-w-[160px]">{file?.name}</span>
-            </div>
-
-            {/* Info bar */}
-            <div className="grid grid-cols-4 gap-4 pt-4 border-t border-[var(--color-grid-500)]">
-              {[
-                ["Song Pitch", analysis.pitch],
-                ["BPM", String(analysis.bpm)],
-                ["Chord Key", `${analysis.keyNote} ${analysis.keyMode}`],
-                ["Danceability", `${analysis.danceability}%`],
-              ].map(([label, value]) => (
-                <div key={label} className="text-center">
-                  <div className="text-xs font-mono text-[var(--color-muted-2)] uppercase tracking-wider mb-1">{label}</div>
-                  <div className="font-mono font-bold text-[var(--color-foreground)] text-base leading-tight">{value}</div>
+        {/* Upload */}
+        {!audioBuffer ? (
+          <div
+            className={`upload-zone rounded-2xl p-12 flex flex-col items-center justify-center text-center cursor-pointer mb-8 ${dragOver ? "drag-over" : ""}`}
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+            onClick={() => inputRef.current?.click()}
+          >
+            <input ref={inputRef} type="file" accept="audio/*,.mp3,.wav" className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+            {loadingAudio ? (
+              <div style={{ color: "#63B39A", fontWeight: 600 }}>Loading audio…</div>
+            ) : (
+              <>
+                <div style={{ width: 64, height: 64, borderRadius: 18, background: "var(--color-soft-green)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-deep-teal)" strokeWidth="1.8" strokeLinecap="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
                 </div>
-              ))}
-            </div>
+                <p style={{ fontWeight: 700, color: "var(--color-foreground)", fontSize: 16, marginBottom: 6 }}>Drop your MP3 or WAV here</p>
+                <p style={{ fontSize: 13, color: "var(--color-muted-2)" }}>or click to browse · processed locally, no upload</p>
+              </>
+            )}
           </div>
-
-          {/* Settings cards */}
-          <div className="grid grid-cols-3 gap-4 mb-5">
-
-            {/* Card 1: Mastering Intensity */}
-            <div className="glass-card rounded-2xl p-4">
-              <div className="text-xs font-mono text-[var(--color-muted-2)] uppercase tracking-wider mb-2">Mastering Intensity</div>
-              <div className="font-mono text-xl font-bold text-[var(--color-foreground)] mb-0.5">
-                {targetLUFS.toFixed(1)} <span className="text-xs font-normal text-[var(--color-muted-2)]">dB LUFSi</span>
+        ) : (
+          <>
+            {/* ── Full-width Waveform Player ── */}
+            <div className="waveform-player mb-6">
+              <div className="waveform-hit" style={{ height: 88, borderRadius: 0, padding: "8px 16px" }}
+                onClick={seekMain}>
+                <canvas ref={mainCanvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
+                <div className="waveform-playhead" style={{ left: `calc(${mainProgress*100}% + 14px)`, background: "#63B39A" }} />
               </div>
-              <div className="text-xs text-[var(--color-muted-2)] mb-2">{platform === "apple" ? "Apple Music" : platform === "youtube" ? "YouTube" : "Spotify"} target</div>
-              <canvas ref={miniWaveRef} width={400} height={50} className="w-full rounded-lg mb-2" style={{ height: "40px", background: "var(--color-grid-300)" }} />
-              <LevelSelector<Intensity> value={intensity} onChange={setIntensity} options={["low", "medium", "high"]} />
+              <div className="player-controls">
+                <button onClick={() => { stopMain(); setMainProgress(Math.max(0, mainProgress - 10/audioBuffer!.duration)); }} className="player-btn">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="19,20 9,12 19,4"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" strokeWidth="3"/></svg>
+                </button>
+                <button onClick={toggleMain} className="player-btn play">
+                  {mainPlaying
+                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>}
+                </button>
+                <button onClick={() => { stopMain(); setMainProgress(Math.min(1, mainProgress + 10/audioBuffer!.duration)); }} className="player-btn">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,4 15,12 5,20"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" strokeWidth="3"/></svg>
+                </button>
+                <span className="player-time">{fmt(mainTime)} / {fmt(audioBuffer!.duration)}</span>
+                <div style={{ flex: 1 }} />
+                <button onClick={() => { setAudioBuffer(null); setFile(null); setOriginalUrl(null); setAnalysis(null); setResult(null); stopMain(); }}
+                  style={{ fontSize: 12, color: "var(--color-muted-2)", background: "none", border: "none", cursor: "pointer" }}>
+                  ✕ Remove
+                </button>
+              </div>
+              {analysis && (
+                <div className="player-info-bar">
+                  {[
+                    ["Pitch", `${analysis.pitch} Hz`],
+                    ["BPM", analysis.bpm],
+                    ["Key", `${analysis.keyNote} ${analysis.keyMode}`],
+                    ["Dance", `${analysis.danceability}%`],
+                    ["LUFS", analysis.lufs],
+                  ].map(([k, v]) => (
+                    <div key={String(k)} className="player-info-item">
+                      <span className="player-info-label">{k}</span>
+                      <span className="player-info-value">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Card 2: Stereo Widening */}
-            <div className="glass-card rounded-2xl p-4">
-              <div className="text-xs font-mono text-[var(--color-muted-2)] uppercase tracking-wider mb-2">Stereo Widening</div>
-              <canvas ref={stereoCanvasRef} width={200} height={100} className="w-full mb-2" style={{ height: "90px" }} />
-              <div className="text-xs text-center text-[var(--color-muted-2)] mb-2">
-                {{ narrow: "Focused mono", standard: "Natural stereo", wide: "Wide stereo" }[stereoWidth]}
+            {/* ── Presets ── */}
+            <div className="glass-card rounded-2xl p-5 mb-4">
+              <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 12 }}>Preset Styles</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {(["club", "radio", "streaming", "vinyl", "custom"] as Preset[]).map(p => (
+                  <button key={p} className={`preset-btn ${preset === p ? "active" : ""}`} onClick={() => applyPreset(p)}>
+                    {p.charAt(0).toUpperCase() + p.slice(1)}
+                  </button>
+                ))}
               </div>
-              <LevelSelector<StereoWidth> value={stereoWidth} onChange={setStereoWidth} options={["narrow", "standard", "wide"]} />
             </div>
 
-            {/* Card 3: Noise Reduction */}
-            <div className="glass-card rounded-2xl p-4">
-              <div className="text-xs font-mono text-[var(--color-muted-2)] uppercase tracking-wider mb-2">Noise Reduction</div>
-              <canvas ref={noiseCanvasRef} width={300} height={90} className="w-full rounded-lg mb-2" style={{ height: "82px", background: "var(--color-grid-300)" }} />
-              <div className="text-xs text-center text-[var(--color-muted-2)] mb-2">
-                HP cut: {NOISE_CUTOFF[noiseLevel]}Hz · <span className="text-red-400">— noise floor</span>
+            {/* ── Settings cards ── */}
+            <div className="grid md:grid-cols-3 gap-4 mb-4">
+              {/* Intensity */}
+              <div className="glass-card rounded-2xl p-5">
+                <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 14 }}>Mastering Intensity</div>
+                <div style={{ fontSize: 32, fontWeight: 800, fontFamily: "var(--font-mono)", color: "#63B39A", marginBottom: 4 }}>{targetLUFS}</div>
+                <div style={{ fontSize: 11, color: "var(--color-muted-2)", marginBottom: 14 }}>Target LUFS</div>
+                <LevelSelector value={intensity} onChange={v => { setIntensity(v); markCustom(); }} options={["low","medium","high"]} />
               </div>
-              <LevelSelector<NoiseLevel> value={noiseLevel} onChange={setNoiseLevel} options={["low", "medium", "high"]} />
+
+              {/* Stereo */}
+              <div className="glass-card rounded-2xl p-5">
+                <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 10 }}>Stereo Widening</div>
+                <canvas ref={stereoCanvasRef} width={200} height={90} style={{ width: "100%", height: 90, display: "block", marginBottom: 10 }} />
+                <LevelSelector value={stereoWidth} onChange={v => { setStereoWidth(v); markCustom(); }} options={["narrow","standard","wide"]} />
+              </div>
+
+              {/* Noise */}
+              <div className="glass-card rounded-2xl p-5">
+                <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 10 }}>Noise Reduction</div>
+                <canvas ref={noiseCanvasRef} width={200} height={90} style={{ width: "100%", height: 90, display: "block", marginBottom: 10 }} />
+                <LevelSelector value={noiseLevel} onChange={v => { setNoiseLevel(v); markCustom(); }} options={["low","medium","high"]} />
+              </div>
             </div>
-          </div>
 
-          {/* Processing toggles + platform */}
-          <div className="glass-card rounded-2xl p-5 mb-5">
-            <div className="text-xs font-mono text-[var(--color-muted-2)] uppercase tracking-wider mb-2">Processing</div>
-            <ToggleSwitch label="Automatic Equalization" value={autoEQ} onChange={setAutoEQ} desc="Analyse spectrum and apply corrective EQ" />
-            <ToggleSwitch label="Low-cut Filter (30 Hz)" value={lowCut} onChange={setLowCut} desc="Remove sub-bass rumble below 30 Hz" />
-            <ToggleSwitch label="High-shelf Boost (12 kHz)" value={highShelf} onChange={setHighShelf} desc="+1.5 dB air boost above 12 kHz" />
-            <ToggleSwitch label="Limiter −0.3 dBTP" value={limiter} onChange={setLimiter} desc="True-peak brick-wall limiter" />
-
-            <div className="mt-4 pt-4 border-t border-[var(--color-grid-500)]">
-              <div className="text-xs font-mono text-[var(--color-muted-2)] uppercase tracking-wider mb-2">Target Platform</div>
-              <div className="flex gap-2">
-                {(["spotify", "apple", "youtube"] as Platform[]).map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setPlatform(p)}
-                    className="flex-1 py-2 px-3 rounded-xl text-xs font-semibold font-mono transition-all"
-                    style={p === platform
-                      ? { background: "var(--color-deep-teal)", color: "white" }
-                      : { background: "var(--color-grid-300)", color: "var(--color-muted)", border: "1px solid var(--color-grid-500)" }
-                    }
-                  >
+            {/* ── Toggles + Platform ── */}
+            <div className="glass-card rounded-2xl p-5 mb-4">
+              <div className="grid md:grid-cols-2 gap-x-8 gap-y-4 mb-5">
+                <ToggleSwitch label="Auto EQ" value={autoEQ} onChange={v => { setAutoEQ(v); markCustom(); }} desc="Frequency-adaptive equalisation" />
+                <ToggleSwitch label="Low-cut Filter" value={lowCut} onChange={v => { setLowCut(v); markCustom(); }} desc="Remove sub-bass below 30 Hz" />
+                <ToggleSwitch label="High-shelf Boost" value={highShelf} onChange={v => { setHighShelf(v); markCustom(); }} desc="+2 dB presence above 8 kHz" />
+                <ToggleSwitch label="Limiter −0.3 dBTP" value={limiter} onChange={v => { setLimiter(v); markCustom(); }} desc="True-peak ceiling protection" />
+              </div>
+              <div className="tron-line" style={{ marginBottom: 16 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-muted-2)" }}>Target Platform</span>
+                {(["spotify","apple","youtube"] as Platform[]).map(p => (
+                  <button key={p} className={`platform-btn ${platform === p ? "active" : ""}`}
+                    onClick={() => { setPlatform(p); markCustom(); }}>
                     {p === "spotify" ? "Spotify −14" : p === "apple" ? "Apple −16" : "YouTube −14"}
                   </button>
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Processing progress */}
-          {isProcessing && (
-            <div className="mb-5">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-[var(--color-muted)]">{STAGE_LABELS[stage]}</span>
-                <span className="font-mono text-xs text-[var(--color-muted-2)]">{STAGE_PROGRESS[stage]}%</span>
+            {/* ── EQ Visualizer ── */}
+            {autoEQ && (
+              <div className="glass-card rounded-2xl p-5 mb-4">
+                <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 10 }}>
+                  EQ Curve <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: 10 }}>— drag handles to adjust ±12 dB</span>
+                </div>
+                <EQVisualizer bands={eqBands} onChange={b => { setEqBands(b); markCustom(); }} />
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                  {["60 Hz","250 Hz","1 kHz","4 kHz","12 kHz"].map((f,i) => (
+                    <span key={i} style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-muted-2)", textAlign: "center", width: "20%" }}>{f}</span>
+                  ))}
+                </div>
               </div>
-              <div className="h-2 bg-[var(--color-grid-300)] rounded-full overflow-hidden">
-                <div className="h-full progress-bar-fill rounded-full" style={{ width: `${STAGE_PROGRESS[stage]}%` }} />
+            )}
+
+            {/* ── Reference Track ── */}
+            <div className="glass-card rounded-2xl p-5 mb-4">
+              <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 10 }}>Reference Track</div>
+              <div className={`ref-track-zone ${refFile ? "active" : ""}`} onClick={() => refInputRef.current?.click()}>
+                <input ref={refInputRef} type="file" accept="audio/*" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleRefFile(f); }} />
+                {refFile && refAnalysis ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: "var(--color-foreground)" }}>{refFile.name.replace(/\.[^.]+$/,"")}</div>
+                      <div style={{ fontSize: 11, color: "var(--color-muted-2)", marginTop: 2, fontFamily: "var(--font-mono)" }}>
+                        LUFS {refAnalysis.lufs} · {refAnalysis.keyNote} {refAnalysis.keyMode} · {refAnalysis.bpm} BPM
+                      </div>
+                    </div>
+                    <button onClick={e => { e.stopPropagation(); setRefFile(null); setRefAnalysis(null); }}
+                      style={{ fontSize: 12, color: "var(--color-muted-2)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-muted-2)" strokeWidth="1.8" strokeLinecap="round">
+                      <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+                    </svg>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-muted)" }}>Upload a reference track</div>
+                      <div style={{ fontSize: 11, color: "var(--color-muted-2)" }}>Master will match its loudness signature</div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
 
-          {/* Master button */}
-          {stage !== "done" && !isProcessing && (
-            <button onClick={runMastering} className="w-full py-3.5 rounded-xl bg-[var(--color-deep-teal)] text-white font-semibold text-sm hover:opacity-90 transition-opacity mb-8">
-              Master this track
-            </button>
-          )}
-
-          {/* ── Before / After ── */}
-          {result && stage === "done" && (
-            <>
-              <div className="flex items-center justify-between mb-4 mt-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[var(--color-highlight)] pulse-ring" />
-                  <span className="font-semibold text-[var(--color-foreground)]">Master ready</span>
+            {/* ── Loudness History ── */}
+            {loudnessHistory.length > 2 && (
+              <div className="glass-card rounded-2xl p-5 mb-4">
+                <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 10 }}>
+                  Loudness Profile {result ? "— Mastered" : "— Original"}
                 </div>
-                <div className="ab-toggle">
-                  <button className={activePlayer === "original" ? "active" : ""} onClick={() => setActivePlayer("original")}>A</button>
-                  <button className={activePlayer === "mastered" ? "active" : ""} onClick={() => setActivePlayer("mastered")}>B</button>
+                <div className="loudness-graph-wrap" style={{ padding: 0 }}>
+                  <canvas ref={loudHistRef} width={600} height={90} style={{ width: "100%", height: 90, display: "block" }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                  <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-muted-2)" }}>0:00</span>
+                  <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "rgba(99,179,154,0.7)" }}>—14 LUFS (Spotify)</span>
+                  <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-muted-2)" }}>{fmt(audioBuffer!.duration)}</span>
                 </div>
               </div>
+            )}
 
-              <div className="space-y-4 mb-5">
-                <MiniPlayer buffer={audioBuffer} url={originalUrl} label="A — Original" accentColor="#8b93a8"
-                  isActive={activePlayer === "original"} onActivate={() => setActivePlayer("original")}
-                  stats={{ lufs: analysis.lufs, peak: analysis.peak, dr: analysis.dr }} />
-                <MiniPlayer buffer={result.masteredBuffer} url={result.masteredUrl} label="B — Mastered"
-                  accentColor="#2F6B58" isActive={activePlayer === "mastered"} onActivate={() => setActivePlayer("mastered")}
-                  stats={result.statsOut} />
-              </div>
-
-              {/* Stats comparison */}
-              <div className="stats-table mb-6">
-                <div className="stats-table-head">
-                  <span>Metric</span><span>Original</span><span style={{ color: "var(--color-deep-teal)" }}>Mastered</span>
+            {/* ── Processing button ── */}
+            <div className="mb-6">
+              {error && (
+                <div style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", fontSize: 13, color: "#ef4444", marginBottom: 12 }}>
+                  {error}
                 </div>
-                {([
-                  ["Integrated LUFS", " LUFS", analysis.lufs, result.statsOut.lufs, false],
-                  ["True Peak", " dBFS", analysis.peak, result.statsOut.peak, true],
-                  ["Dynamic Range", " dB", analysis.dr, result.statsOut.dr, false],
-                ] as [string, string, number, number, boolean][]).map(([label, unit, vIn, vOut, lowerBetter]) => (
-                  <div key={label} className="stats-table-row">
-                    <span className="text-xs text-[var(--color-muted)]">{label}</span>
-                    <span className="stats-val text-[var(--color-muted)]">{vIn.toFixed(1)}{unit}</span>
-                    <span className={`stats-val ${(lowerBetter ? vOut < vIn : vOut > vIn) ? "improved" : "text-[var(--color-foreground)]"}`}>{vOut.toFixed(1)}{unit}</span>
+              )}
+              {stage ? (
+                <div style={{ padding: "16px", borderRadius: 14, background: "rgba(47,107,88,0.08)", border: "1px solid rgba(99,179,154,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: "50%", border: "2px solid #63B39A", borderTopColor: "transparent", animation: "spin 0.8s linear infinite" }} />
+                  <span style={{ fontWeight: 600, color: "#63B39A" }}>{stage}</span>
+                  <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--color-grid-500)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: stage === "Done!" ? "100%" : stage === "Encoding…" ? "80%" : stage === "Mastering…" ? "60%" : stage === "Applying Gain…" ? "45%" : stage === "Applying EQ…" ? "30%" : "15%", background: "#63B39A", borderRadius: 2, transition: "width 0.4s ease" }} />
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <button onClick={doMaster} className="download-btn" style={{ width: "100%", justifyContent: "center", fontSize: 16 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="2" y="9" width="3.5" height="12" rx="1.75" opacity="0.45"/>
+                    <rect x="7.5" y="4" width="3.5" height="17" rx="1.75"/>
+                    <rect x="13" y="7" width="3.5" height="14" rx="1.75" opacity="0.78"/>
+                    <rect x="18.5" y="2" width="3.5" height="19" rx="1.75" opacity="0.55"/>
+                  </svg>
+                  Master Track
+                </button>
+              )}
+            </div>
 
-              {/* Download section */}
-              <div className="glass-card rounded-2xl p-5">
-                <div className="text-xs font-mono text-[var(--color-muted-2)] uppercase tracking-wider mb-3">Download</div>
-
-                {/* Filename preview */}
-                <div className="flex items-center gap-3 bg-[var(--color-grid-300)] rounded-xl px-4 py-3 mb-4">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-[var(--color-highlight)] flex-shrink-0" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                  <div className="min-w-0">
-                    <div className="font-mono text-sm font-medium text-[var(--color-foreground)] truncate">
-                      {file?.name.replace(/\.[^.]+$/, "") ?? "track"}_mastered.wav
+            {/* ── Before / After ── */}
+            {result && audioBuffer && originalUrl && (
+              <div className="glass-card rounded-2xl p-5 mb-4 animate-fade-up">
+                <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 14 }}>
+                  Before / After Comparison
+                </div>
+                <div className="grid md:grid-cols-2 gap-4 mb-5">
+                  <MiniPlayer buffer={audioBuffer} url={originalUrl} label="ORIGINAL" accentColor="rgb(99,130,154)"
+                    isActive={activePlayer === "before"} onActivate={() => setActivePlayer("before")}
+                    stats={{ lufs: analysis!.lufs, peak: analysis!.peak, dr: analysis!.dr }} />
+                  <MiniPlayer buffer={result.buffer} url={result.url} label="MASTERED" accentColor="rgb(99,179,154)"
+                    isActive={activePlayer === "after"} onActivate={() => setActivePlayer("after")}
+                    stats={result.stats} />
+                </div>
+                {/* Stats table */}
+                <div className="stats-table">
+                  <div className="stats-table-head">
+                    <span>Metric</span><span>Original</span><span>Mastered</span>
+                  </div>
+                  {[
+                    { label: "LUFS", orig: analysis!.lufs, master: result.stats.lufs, unit: "" },
+                    { label: "Peak dBFS", orig: analysis!.peak, master: result.stats.peak, unit: "" },
+                    { label: "Dyn. Range", orig: analysis!.dr, master: result.stats.dr, unit: " dB" },
+                  ].map(row => (
+                    <div key={row.label} className="stats-table-row">
+                      <span style={{ color: "var(--color-muted)", fontSize: 13 }}>{row.label}</span>
+                      <span className="stats-val">{row.orig}{row.unit}</span>
+                      <span className={`stats-val improved`}>{row.master}{row.unit}</span>
                     </div>
-                    {(metadata.artist || metadata.title) && (
-                      <div className="text-xs text-[var(--color-muted-2)] truncate mt-0.5">
-                        {[metadata.artist, metadata.title, metadata.year].filter(Boolean).join(" · ")}
-                      </div>
-                    )}
-                  </div>
-                  <div className="ml-auto text-xs text-[var(--color-muted-2)] flex-shrink-0">WAV · 16-bit</div>
+                  ))}
                 </div>
+              </div>
+            )}
 
-                <div className="flex gap-3">
-                  <button onClick={() => setShowMetadata(true)} className="flex-1 py-2.5 rounded-xl border border-[var(--color-grid-500)] text-sm text-[var(--color-muted)] hover:border-[var(--color-highlight)] hover:text-[var(--color-highlight)] transition-all">
+            {/* ── Download ── */}
+            {result && (
+              <div className="glass-card rounded-2xl p-5 animate-fade-up">
+                <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 14 }}>Download</div>
+                <div style={{ fontSize: 12, color: "var(--color-muted-2)", fontFamily: "var(--font-mono)", marginBottom: 14 }}>
+                  {metadata.title || file?.name?.replace(/\.[^.]+$/,"") || "master"}_master.wav
+                </div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button onClick={download} className="download-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download WAV
+                  </button>
+                  <button onClick={() => setShowMetadata(true)}
+                    style={{ padding: "13px 22px", borderRadius: 14, border: "1px solid var(--color-grid-500)", background: "transparent", color: "var(--color-muted)", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     Edit Metadata
                   </button>
-                  <button onClick={download} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[var(--color-deep-teal)] text-white text-sm font-semibold hover:opacity-90 transition-opacity">
-                    <DownloadIcon /> Download WAV
-                  </button>
                 </div>
               </div>
+            )}
+          </>
+        )}
 
-              {/* Reset */}
-              <button
-                onClick={() => { setFile(null); setAudioBuffer(null); setAnalysis(null); setOriginalUrl(null); setResult(null); setStage("idle"); setError(null); }}
-                className="w-full mt-3 py-2.5 rounded-xl border border-[var(--color-grid-500)] text-[var(--color-muted)] text-sm hover:border-[var(--color-highlight)] hover:text-[var(--color-highlight)] transition-all"
-              >
-                Master another track
-              </button>
-            </>
-          )}
-
-          {/* Info pills (when not done) */}
-          {stage !== "done" && (
-            <div className="mt-8 grid grid-cols-3 gap-4 text-center text-xs text-[var(--color-muted-2)]">
-              {[["−14 LUFS", "Spotify standard"], ["−0.3 dBTP", "True-peak limit"], ["100% local", "No upload"]].map(([v, l]) => (
-                <div key={v} className="glass-card rounded-xl p-3">
-                  <div className="font-mono font-bold text-[var(--color-foreground)] mb-0.5">{v}</div>
-                  <div>{l}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+        {showMetadata && (
+          <MetadataModal metadata={metadata} setMetadata={setMetadata} onClose={() => setShowMetadata(false)} />
+        )}
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

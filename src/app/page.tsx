@@ -6,6 +6,25 @@ export const metadata: Metadata = {
   title: "Andy'K Music Lab — Professional tools for producers and DJs",
 };
 
+// ── AB heading pattern helper ─────────────────────────────────────────────────
+function AltHead({ children }: { children: string }) {
+  const words = children.split(" ");
+  return (
+    <>
+      {words.map((w, i) => (
+        <span key={i}>
+          {i > 0 && " "}
+          {i % 2 === 0 ? (
+            <span className="head-word-serif serif-accent">{w}</span>
+          ) : (
+            <span className="head-word-bold">{w}</span>
+          )}
+        </span>
+      ))}
+    </>
+  );
+}
+
 // ── SVG Icons ────────────────────────────────────────────────────────────────
 
 const IconUpload = () => (
@@ -15,14 +34,12 @@ const IconUpload = () => (
     <line x1="12" y1="3" x2="12" y2="15"/>
   </svg>
 );
-
 const IconProcess = () => (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
     <circle cx="12" cy="12" r="3"/>
     <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
   </svg>
 );
-
 const IconDownload = () => (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -30,7 +47,6 @@ const IconDownload = () => (
     <line x1="12" y1="15" x2="12" y2="3"/>
   </svg>
 );
-
 const IconEqualizer = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <rect x="2" y="9" width="3.5" height="12" rx="1.75" opacity="0.45"/>
@@ -40,13 +56,11 @@ const IconEqualizer = () => (
     <rect x="18.5" y="2" width="3.5" height="19" rx="1.75" opacity="0.55"/>
   </svg>
 );
-
 const IconPulse = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <polyline points="2,12 5,12 7,5 9,19 11,9 13,15 15,11 17,13 19,12 22,12"/>
   </svg>
 );
-
 const IconVinyl = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
     <circle cx="12" cy="12" r="10"/>
@@ -55,13 +69,11 @@ const IconVinyl = () => (
     <path d="M12 6.5 A5.5 5.5 0 0 1 17.5 12"/>
   </svg>
 );
-
 const IconArrow = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M5 12h14M12 5l7 7-7 7"/>
   </svg>
 );
-
 const IconCPU = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
     <rect x="4" y="4" width="16" height="16" rx="2"/>
@@ -72,14 +84,12 @@ const IconCPU = () => (
     <line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>
   </svg>
 );
-
 const IconLock = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
     <rect x="3" y="11" width="18" height="11" rx="2"/>
     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
   </svg>
 );
-
 const IconCheck = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -102,10 +112,7 @@ function HeroWaveform() {
         <div
           key={i}
           className="hero-wave-bar"
-          style={{
-            height: `${h}px`,
-            animationDelay: `${((i * 0.075) % 1.8).toFixed(2)}s`,
-          }}
+          style={{ height: `${h}px`, animationDelay: `${((i * 0.075) % 1.8).toFixed(2)}s` }}
         />
       ))}
     </div>
@@ -115,93 +122,27 @@ function HeroWaveform() {
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const steps = [
-  {
-    num: "01",
-    icon: <IconUpload />,
-    title: "Upload Your Track",
-    desc: "Drop your MP3 or WAV file — no account, no sign-up. Your audio is never sent to any server.",
-  },
-  {
-    num: "02",
-    icon: <IconProcess />,
-    title: "AI-Powered Processing",
-    desc: "Our browser-based engine analyzes loudness, applies EQ, and masters to industry standards in seconds.",
-  },
-  {
-    num: "03",
-    icon: <IconDownload />,
-    title: "Compare & Download",
-    desc: "Hear the difference with the A/B waveform compare, check LUFS stats, and download your mastered WAV.",
-  },
+  { num: "01", icon: <IconUpload />, title: "Upload Your Track", desc: "Drop your MP3 or WAV file — no account, no sign-up. Your audio is never sent to any server." },
+  { num: "02", icon: <IconProcess />, title: "AI-Powered Processing", desc: "Our browser-based engine analyzes loudness, applies EQ, and masters to industry standards in seconds." },
+  { num: "03", icon: <IconDownload />, title: "Compare & Download", desc: "Hear the difference with the A/B waveform compare, check LUFS stats, and download your mastered WAV." },
 ];
 
 const tools = [
-  {
-    href: "/mastering",
-    icon: <IconEqualizer />,
-    title: "Mastering Tool",
-    badge: "Demo Free",
-    desc: "Normalize to -14 LUFS (Spotify standard), apply high-shelf boost and low-cut, limit to -0.3 dBTP. A/B waveform compare included.",
-  },
-  {
-    href: "/bpm",
-    icon: <IconPulse />,
-    title: "BPM + Key Detector",
-    badge: "Free",
-    desc: "Instant BPM detection via autocorrelation, musical key via Krumhansl-Schmuckler profiles, and Camelot wheel mapping.",
-  },
-  {
-    href: "/planner",
-    icon: <IconVinyl />,
-    title: "DJ Set Planner",
-    badge: "Free",
-    desc: "Build harmonically coherent playlists using the Camelot Wheel. Drag, sort, and export perfect-transition set lists.",
-  },
+  { href: "/mastering", icon: <IconEqualizer />, title: "Mastering Tool", badge: "Demo Free", desc: "Normalize to -14 LUFS (Spotify standard), apply EQ, stereo widening, and limit to -0.3 dBTP. Includes A/B waveform compare, presets, and reference track analysis." },
+  { href: "/bpm", icon: <IconPulse />, title: "BPM + Key Detector", badge: "Free", desc: "Instant BPM via autocorrelation, musical key via Krumhansl-Schmuckler, Camelot wheel, Tap BPM, danceability score, and analysis history." },
+  { href: "/planner", icon: <IconVinyl />, title: "DJ Set Planner", badge: "Free", desc: "Drag & drop tracks, auto-sort by Camelot key, visualize energy flow, see transition quality labels, and export your set." },
 ];
 
 const stats = [
-  {
-    icon: <IconCPU />,
-    value: "Web Audio API",
-    desc: "Built on the W3C Web Audio standard — no plugins, no installs, runs natively in every modern browser.",
-  },
-  {
-    icon: <IconLock />,
-    value: "100% Client-side",
-    desc: "Your audio never leaves your device. All DSP processing happens locally — complete privacy guaranteed.",
-  },
-  {
-    icon: <IconCheck />,
-    value: "Industry Standards",
-    desc: "Spotify -14 LUFS · Apple Music -16 LUFS · -0.3 dBTP true-peak limit — streaming platforms ready.",
-  },
+  { icon: <IconCPU />, value: "Web Audio API", desc: "Built on the W3C Web Audio standard — no plugins, no installs, runs natively in every modern browser." },
+  { icon: <IconLock />, value: "100% Client-side", desc: "Your audio never leaves your device. All DSP processing happens locally — complete privacy guaranteed." },
+  { icon: <IconCheck />, value: "Industry Standards", desc: "Spotify -14 LUFS · Apple Music -16 LUFS · -0.3 dBTP true-peak limit — streaming platforms ready." },
 ];
 
 const pricing = [
-  {
-    name: "Single Session",
-    price: "£49",
-    period: "one-time",
-    desc: "One professional mastering session for a single track.",
-    features: ["1 track mastered", "-14 LUFS / -0.3 dBTP", "WAV + MP3 download", "24h turnaround"],
-    featured: false,
-  },
-  {
-    name: "Studio Pass",
-    price: "£19",
-    period: "/month",
-    desc: "For producers releasing regularly.",
-    features: ["Unlimited masterings", "BPM + Key detector", "DJ Set Planner", "Priority processing", "Stem separation (soon)"],
-    featured: false,
-  },
-  {
-    name: "Pro Pass",
-    price: "£149",
-    period: "/year",
-    desc: "Everything in Studio Pass — billed annually, save £79.",
-    features: ["All Studio Pass features", "Save £79 vs monthly", "Early access to new tools", "Label export formats", "Dedicated support"],
-    featured: true,
-  },
+  { name: "Single Session", price: "£49", period: "one-time", desc: "One professional mastering session for a single track.", features: ["1 track mastered", "-14 LUFS / -0.3 dBTP", "WAV + MP3 download", "24h turnaround"], featured: false },
+  { name: "Studio Pass", price: "£19", period: "/month", desc: "For producers releasing regularly.", features: ["Unlimited masterings", "BPM + Key detector", "DJ Set Planner", "Priority processing", "Stem separation (soon)"], featured: false },
+  { name: "Pro Pass", price: "£149", period: "/year", desc: "Everything in Studio Pass — billed annually, save £79.", features: ["All Studio Pass features", "Save £79 vs monthly", "Early access to new tools", "Label export formats", "Dedicated support"], featured: true },
 ];
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -248,18 +189,9 @@ export default function LandingPage() {
             </div>
 
             <div className="trust-badges">
-              <span className="trust-badge">
-                <span className="trust-check">✓</span>
-                Spotify -14 LUFS Ready
-              </span>
-              <span className="trust-badge">
-                <span className="trust-check">✓</span>
-                Apple Music Compliant
-              </span>
-              <span className="trust-badge">
-                <span className="trust-check">✓</span>
-                Free to Try
-              </span>
+              <span className="trust-badge"><span className="trust-check">✓</span>Spotify -14 LUFS Ready</span>
+              <span className="trust-badge"><span className="trust-check">✓</span>Apple Music Compliant</span>
+              <span className="trust-badge"><span className="trust-check">✓</span>Free to Try</span>
             </div>
           </ScrollReveal>
         </div>
@@ -273,7 +205,9 @@ export default function LandingPage() {
           <ScrollReveal>
             <div className="text-center mb-16">
               <span className="section-label">How It Works</span>
-              <h2 className="section-heading">Three steps to a professional master</h2>
+              <h2 className="section-heading">
+                <AltHead>Three steps to a professional master</AltHead>
+              </h2>
               <p className="section-subtext mx-auto">
                 No account. No upload. Everything runs in your browser — private, fast, and free to try.
               </p>
@@ -303,7 +237,9 @@ export default function LandingPage() {
           <ScrollReveal>
             <div className="mb-16">
               <span className="section-label">Tools</span>
-              <h2 className="section-heading">Everything in one place</h2>
+              <h2 className="section-heading">
+                <AltHead>Everything in one place</AltHead>
+              </h2>
               <p className="section-subtext">
                 Browser-native DSP. No plugins. No accounts. Just results.
               </p>
@@ -319,10 +255,7 @@ export default function LandingPage() {
                     <span className="premium-tool-badge">{t.badge}</span>
                     <h3 className="premium-tool-name">{t.title}</h3>
                     <p className="premium-tool-desc">{t.desc}</p>
-                    <span className="try-free-btn">
-                      Try Free
-                      <IconArrow />
-                    </span>
+                    <span className="try-free-btn">Try Free<IconArrow /></span>
                   </div>
                 </Link>
               </ScrollReveal>
@@ -358,7 +291,9 @@ export default function LandingPage() {
           <ScrollReveal>
             <div className="text-center mb-16">
               <span className="section-label">Pricing</span>
-              <h2 className="section-heading">Start free, upgrade when ready</h2>
+              <h2 className="section-heading">
+                <AltHead>Start free upgrade when ready</AltHead>
+              </h2>
               <p className="section-subtext mx-auto">
                 All tools are free to try in demo mode. No credit card required.
               </p>
@@ -369,17 +304,13 @@ export default function LandingPage() {
             {pricing.map((plan, i) => (
               <ScrollReveal key={plan.name} delay={(i % 3) as 0 | 1 | 2 | 3}>
                 <div className={`pricing-card h-full ${plan.featured ? "featured" : ""}`}>
-                  {plan.featured && (
-                    <span className="pricing-badge">Most Popular</span>
-                  )}
-
+                  {plan.featured && <span className="pricing-badge">Most Popular</span>}
                   <div className="mb-2">
                     <span className="pricing-price">{plan.price}</span>
                     <span className="pricing-period">{plan.period}</span>
                   </div>
                   <div className="pricing-name">{plan.name}</div>
                   <p className="pricing-desc">{plan.desc}</p>
-
                   <div className="pricing-features">
                     {plan.features.map((f) => (
                       <div key={f} className="pricing-feature">
@@ -388,11 +319,7 @@ export default function LandingPage() {
                       </div>
                     ))}
                   </div>
-
-                  <button
-                    disabled
-                    className={`pricing-cta ${plan.featured ? "pricing-cta-featured" : "pricing-cta-default"}`}
-                  >
+                  <button disabled className={`pricing-cta ${plan.featured ? "pricing-cta-featured" : "pricing-cta-default"}`}>
                     Join Waitlist — Coming Soon
                   </button>
                 </div>
