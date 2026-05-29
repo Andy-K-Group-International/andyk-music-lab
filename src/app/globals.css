@@ -2,39 +2,39 @@
 
 @theme inline {
   --color-background: #ffffff;
-  --color-foreground: #01011b;
-  --color-eggplant: #31263b;
-  --color-muted: #525a70;
-  --color-muted-2: #8b93a8;
+  --color-foreground: #111111;
+  --color-eggplant: #1a1a1a;
+  --color-muted: #525252;
+  --color-muted-2: #8a8a8a;
   --color-highlight: #111111;
   --color-deep-teal: #111111;
   --color-soft-green: #D9D9D9;
-  --color-grid-300: #f5f5f7;
-  --color-grid-500: #e2e4ea;
-  --color-grid-700: #c4c8d4;
-  --color-bg-light: #faf9fb;
+  --color-grid-300: #f5f5f5;
+  --color-grid-500: #e5e5e5;
+  --color-grid-700: #d4d4d4;
+  --color-bg-light: #fafafa;
   --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
 }
 
 :root {
   --color-background: #ffffff;
-  --color-foreground: #01011b;
-  --color-eggplant:   #31263b;
-  --color-muted:      #525a70;
-  --color-muted-2:    #8b93a8;
+  --color-foreground: #111111;
+  --color-eggplant:   #1a1a1a;
+  --color-muted:      #525252;
+  --color-muted-2:    #8a8a8a;
   --color-highlight:  #111111;
   --color-deep-teal:  #111111;
   --color-soft-green: #D9D9D9;
-  --color-grid-300:   #f5f5f7;
-  --color-grid-500:   #e2e4ea;
-  --color-grid-700:   #c4c8d4;
-  --color-bg-light:   #faf9fb;
+  --color-grid-300:   #f5f5f5;
+  --color-grid-500:   #e5e5e5;
+  --color-grid-700:   #d4d4d4;
+  --color-bg-light:   #fafafa;
   --hero-bg:                   linear-gradient(135deg, #F5F5F5 0%, #EBEBEB 40%, #F0F0F0 70%, #E8E8E8 100%);
   --hero-heading:              #111111;
   --hero-accent:               #111111;
-  --hero-subtitle:             #525a70;
-  --hero-trust-text:           #8b93a8;
+  --hero-subtitle:             #525252;
+  --hero-trust-text:           #8a8a8a;
   --hero-trust-check:          #111111;
   --btn-primary-bg:            #111111;
   --hero-btn-secondary-bg:     #ffffff;
@@ -82,14 +82,14 @@ body {
   color: #111111; letter-spacing: -0.02em;
 }
 .logo-pipe { color: rgba(0,0,0,0.30); margin: 0 8px; }
-.logo-name { font-size: 14px; font-weight: 500; color: #01011b; }
+.logo-name { font-size: 14px; font-weight: 500; color: #111111; }
 .nav-link {
   font-size: 14px;
-  color: #525a70;
+  color: #525252;
   padding: 6px 14px; border-radius: 8px;
   transition: all 0.2s ease;
 }
-.nav-link:hover, .nav-link.active { color: #01011b; background: rgba(0,0,0,0.08); }
+.nav-link:hover, .nav-link.active { color: #111111; background: rgba(0,0,0,0.08); }
 .nav-back-link {
   font-size: 12px;
   color: var(--color-muted-2);
@@ -282,7 +282,7 @@ body {
 
 /* ===== PREMIUM FOOTER ===== */
 .premium-footer {
-  background: #06060e;
+  background: #0a0a0a;
   border-top: 1px solid rgba(0,0,0,0.08);
   padding: 56px 24px 32px;
   transition: background 0.25s ease;
