@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 
-const SUPABASE_URL = "https://kbdvsqdctgeirakpctoz.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiZHZzcWRjdGdlaXJha3BjdG96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MjIwNjQsImV4cCI6MjA5NTI5ODA2NH0.ORKf7RY7Rk6UrWKmrLDy1yF0mHmvBp9YQ0A0u8xIhkQ";
 
 export type WaitlistPlan = "single" | "studio" | "pro";
 
@@ -32,37 +30,22 @@ export default function WaitlistForm({ initialPlan = "studio", onClose }: Props)
     setStatus("submitting");
 
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/lab_waitlist`, {
+      const res = await fetch("/api/waitlist", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
-          "Prefer": "return=minimal",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           name: name.trim() || null,
           plan,
-          source: "lab.djandykofficial.com",
         }),
       });
 
-      if (res.status === 201) {
+      if (res.ok) {
         setStatus("success");
-        // Fire-and-forget notification
-        fetch("/api/notify-waitlist", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim().toLowerCase(), name: name.trim() || null, plan }),
-        }).catch(() => {});
+      } else if (res.status === 409) {
+        setStatus("duplicate");
       } else {
-        const body = await res.json().catch(() => ({}));
-        if (res.status === 409 || body?.code === "23505") {
-          setStatus("duplicate");
-        } else {
-          setStatus("error");
-        }
+        setStatus("error");
       }
     } catch {
       setStatus("error");
