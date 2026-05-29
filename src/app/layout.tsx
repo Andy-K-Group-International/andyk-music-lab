@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono, Playfair_Display, DM_Sans } from "next/font/google";
 import { ThemeProvider } from "@/context/ThemeContext";
 import Navbar from "@/components/Navbar";
+import AdminUnlock from "@/components/AdminUnlock";
 import Link from "next/link";
 import "./globals.css";
 
@@ -125,9 +126,11 @@ export default function RootLayout({
                 {/* Logo + tagline */}
                 <div>
                   <div className="footer-logo mb-3">
-                    <span className="font-mono font-bold text-[#111111] text-base tracking-tight">Andy&apos;K</span>
-                    <span className="text-[rgba(0,0,0,0.25)] mx-2 text-base">|</span>
-                    <span className="text-white/70 font-medium text-base">Music Lab</span>
+                    <AdminUnlock>
+                      <span className="font-mono font-bold text-[#111111] text-base tracking-tight">Andy&apos;K</span>
+                      <span className="text-[rgba(0,0,0,0.25)] mx-2 text-base">|</span>
+                      <span className="text-white/70 font-medium text-base">Music Lab</span>
+                    </AdminUnlock>
                   </div>
                   <p className="footer-tagline">Professional audio tools — built by DJ Andy&apos;K</p>
                   <div className="flex items-center gap-5 flex-wrap">

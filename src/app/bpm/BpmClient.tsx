@@ -78,12 +78,12 @@ function detectKey(chroma: number[]): { note: string; mode: "major" | "minor" } 
   return { note: NOTE_NAMES[bestNote], mode: bestMode };
 }
 
-async function detectBPM(buffer: AudioBuffer): Promise<number> {
+async function detectBPM(buffer: AudioBuffer, admin = false): Promise<number> {
   const sampleRate = buffer.sampleRate;
   const data = buffer.getChannelData(0);
   const frameSize = 512, hopSize = 256;
   const frames: number[] = [];
-  const limit = Math.min(data.length, sampleRate * 90);
+  const limit = admin ? data.length : Math.min(data.length, sampleRate * 90);
   for (let i = 0; i + frameSize < limit; i += hopSize) {
     let energy = 0;
     for (let j = 0; j < frameSize; j++) energy += data[i + j] * data[i + j];
@@ -320,6 +320,11 @@ function TapBPM() {
 
 // ── Main component ─────────────────────────────────────────────────────────
 export default function BpmClient() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    try { setIsAdmin(localStorage.getItem("andyk_lab_admin") === "true"); } catch {}
+  }, []);
+
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -388,7 +393,7 @@ export default function BpmClient() {
       await audioCtx.close();
 
       const [bpm, chroma, energy, pitch] = await Promise.all([
-        detectBPM(buffer),
+        detectBPM(buffer, isAdmin),
         Promise.resolve(buildChroma(buffer)),
         Promise.resolve(computeEnergy(buffer)),
         Promise.resolve(detectPitch(buffer)),
@@ -449,7 +454,7 @@ export default function BpmClient() {
               <span className="head-word-serif serif-accent">Key</span>{" "}
               <span className="head-word-bold">Detector</span>
             </h1>
-            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: "var(--color-soft-green)", color: "var(--color-deep-teal)", fontWeight: 700, flexShrink: 0 }}>Free</span>
+            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: isAdmin ? "#111111" : "var(--color-soft-green)", color: isAdmin ? "#ffffff" : "var(--color-deep-teal)", fontWeight: 700, flexShrink: 0 }}>{isAdmin ? "Admin ✓" : "Free"}</span>
           </div>
           <p style={{ fontSize: 14, color: "var(--color-muted)", lineHeight: 1.65, maxWidth: 520 }}>
             Upload an MP3 or WAV. Detect BPM, key, Camelot position, danceability, and pitch — entirely in your browser.

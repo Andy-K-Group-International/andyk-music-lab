@@ -24,12 +24,13 @@ type Intensity = "low" | "medium" | "high";
 type StereoWidth = "narrow" | "standard" | "wide";
 type NoiseLevel = "low" | "medium" | "high";
 type Platform = "spotify" | "apple" | "youtube";
-type Preset = "club" | "radio" | "streaming" | "vinyl" | "custom";
+type Preset = "club" | "radio" | "streaming" | "vinyl" | "halsey" | "custom";
 
 interface Settings {
   intensity: Intensity; stereoWidth: StereoWidth; noiseLevel: NoiseLevel;
   autoEQ: boolean; lowCut: boolean; highShelf: boolean; limiter: boolean;
   platform: Platform; eqBands: [number, number, number, number, number];
+  truePeak?: number;
 }
 
 const PRESETS: Record<Exclude<Preset, "custom">, Settings> = {
@@ -37,6 +38,7 @@ const PRESETS: Record<Exclude<Preset, "custom">, Settings> = {
   radio:     { intensity: "high",   stereoWidth: "standard", noiseLevel: "high",   autoEQ: true,  lowCut: true,  highShelf: false, limiter: true,  platform: "apple",   eqBands: [1, 0, 1, 3, 2] },
   streaming: { intensity: "medium", stereoWidth: "standard", noiseLevel: "medium", autoEQ: true,  lowCut: false, highShelf: false, limiter: true,  platform: "spotify", eqBands: [0, 0, 0, 0, 0] },
   vinyl:     { intensity: "low",    stereoWidth: "narrow",   noiseLevel: "low",    autoEQ: false, lowCut: false, highShelf: true,  limiter: false, platform: "apple",   eqBands: [2, 1, -1, 1, 2] },
+  halsey:    { intensity: "high",   stereoWidth: "standard", noiseLevel: "medium", autoEQ: true,  lowCut: true,  highShelf: false, limiter: true,  platform: "spotify", eqBands: [-2, -1, 0, 3, 1], truePeak: -1.0 },
 };
 
 interface Analysis {
@@ -87,7 +89,7 @@ function correlate(chroma: number[], profile: number[]): number {
   return num/(Math.sqrt(dc)*Math.sqrt(dp)+1e-9);
 }
 
-async function analyzeBuffer(buf: AudioBuffer): Promise<Analysis> {
+async function analyzeBuffer(buf: AudioBuffer, admin = false): Promise<Analysis> {
   const sr = buf.sampleRate, data = buf.getChannelData(0);
   const stats = computeStats(buf);
 
@@ -116,7 +118,7 @@ async function analyzeBuffer(buf: AudioBuffer): Promise<Analysis> {
 
   // BPM
   const frameSize=512,hopSize=256,frames:number[]=[];
-  const limit=Math.min(data.length,sr*90);
+  const limit = admin ? data.length : Math.min(data.length, sr * 90);
   for(let i=0;i+frameSize<limit;i+=hopSize){let e=0;for(let j=0;j<frameSize;j++)e+=data[i+j]*data[i+j];frames.push(e/frameSize);}
   const maxE=Math.max(...frames);const norm=frames.map(e=>e/(maxE+1e-9));
   const minLag=Math.round(60*sr/(180*hopSize)),maxLag=Math.round(60*sr/(40*hopSize));
@@ -196,7 +198,7 @@ async function masterAudio(
   // True-peak limiting
   const L = rendered.getChannelData(0);
   const R = rendered.numberOfChannels > 1 ? rendered.getChannelData(1) : L;
-  const tpLimit = Math.pow(10, -0.3 / 20);
+  const tpLimit = Math.pow(10, (settings.truePeak ?? -0.3) / 20);
   let peak = 0;
   for (let i = 0; i < L.length; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
   const peakScale = peak > tpLimit ? tpLimit / peak : 1;
@@ -630,6 +632,12 @@ function EQVisualizer({ bands, onChange }: { bands: [number,number,number,number
 
 // ── Main component ─────────────────────────────────────────────────────────
 export default function MasteringClient() {
+  // Admin
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    try { setIsAdmin(localStorage.getItem("andyk_lab_admin") === "true"); } catch {}
+  }, []);
+
   // File state
   const [file, setFile] = useState<File | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -764,14 +772,14 @@ export default function MasteringClient() {
       setMetadata((m: MetadataState) => ({ ...m, title: f.name.replace(/\.[^.]+$/, "") }));
       const hist = computeLoudnessHistory(buffer);
       setLoudnessHistory(hist);
-      const ana = await analyzeBuffer(buffer);
+      const ana = await analyzeBuffer(buffer, isAdmin);
       setAnalysis(ana);
     } catch {
       setError("Failed to decode audio. Please try an MP3 or WAV.");
     } finally {
       setLoadingAudio(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   const handleRefFile = useCallback(async (f: File) => {
     try {
@@ -780,10 +788,10 @@ export default function MasteringClient() {
       const buffer = await audioCtx.decodeAudioData(ab);
       await audioCtx.close();
       setRefFile(f);
-      const ana = await analyzeBuffer(buffer);
+      const ana = await analyzeBuffer(buffer, isAdmin);
       setRefAnalysis(ana);
     } catch { /* ignore ref errors */ }
-  }, []);
+  }, [isAdmin]);
 
   const doMaster = async () => {
     if (!audioBuffer || !analysis) return;
@@ -833,7 +841,7 @@ export default function MasteringClient() {
               <span className="head-word-serif serif-accent">Mastering</span>{" "}
               <span className="head-word-bold">Tool</span>
             </h1>
-            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: "var(--color-soft-green)", color: "var(--color-deep-teal)", fontWeight: 700, flexShrink: 0 }}>Demo Free</span>
+            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: isAdmin ? "#111111" : "var(--color-soft-green)", color: isAdmin ? "#ffffff" : "var(--color-deep-teal)", fontWeight: 700, flexShrink: 0 }}>{isAdmin ? "Admin ✓" : "Demo Free"}</span>
           </div>
           <p style={{ fontSize: 14, color: "var(--color-muted)", lineHeight: 1.65, maxWidth: 540 }}>
             Upload your track. Choose a preset. Master to streaming standards with EQ, stereo widening, and true-peak limiting — in your browser.
@@ -923,9 +931,9 @@ export default function MasteringClient() {
             <div className="glass-card rounded-2xl p-5 mb-4">
               <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 12 }}>Preset Styles</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {(["club", "radio", "streaming", "vinyl", "custom"] as Preset[]).map(p => (
+                {(["club", "radio", "streaming", "vinyl", "halsey", "custom"] as Preset[]).map(p => (
                   <button key={p} className={`preset-btn ${preset === p ? "active" : ""}`} onClick={() => applyPreset(p)}>
-                    {p.charAt(0).toUpperCase() + p.slice(1)}
+                    {p === "halsey" ? "Halsey / Vocal Pop" : p.charAt(0).toUpperCase() + p.slice(1)}
                   </button>
                 ))}
               </div>
