@@ -1,11 +1,17 @@
-const FONT = `Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const SANS  = `'IBM Plex Sans',ui-sans-serif,system-ui,sans-serif`;
+const MONO  = `'IBM Plex Mono',ui-monospace,monospace`;
+const SERIF = `'Playfair Display',Georgia,serif`;
+
+const GF_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&family=Playfair+Display:ital@1&display=swap');`;
+
+// ── Shared blocks ─────────────────────────────────────────────────────────────
 
 const LOGO = `
   <tr>
-    <td style="padding:32px 40px 28px;">
-      <span style="font-size:15px;font-weight:700;color:#111111;letter-spacing:-0.02em;font-family:${FONT};">Andy&rsquo;K</span>
-      <span style="font-size:15px;color:#d4d4d4;margin:0 8px;font-family:${FONT};">/</span>
-      <span style="font-size:13px;font-weight:500;color:#737373;font-family:${FONT};">Music Lab</span>
+    <td style="padding:40px 48px 32px;">
+      <span style="font-family:${MONO};font-size:14px;font-weight:700;color:#111111;letter-spacing:0.06em;text-transform:uppercase;">Andy&rsquo;K</span>
+      <span style="font-family:${MONO};font-size:14px;color:#d4d4d4;margin:0 10px;">&middot;</span>
+      <span style="font-family:${MONO};font-size:11px;font-weight:400;color:#8a8a8a;letter-spacing:0.1em;text-transform:uppercase;">Music Lab</span>
     </td>
   </tr>
   <tr><td style="height:1px;background:#e5e5e5;font-size:0;line-height:0;">&nbsp;</td></tr>`;
@@ -13,9 +19,9 @@ const LOGO = `
 const FOOTER = `
   <tr><td style="height:1px;background:#e5e5e5;font-size:0;line-height:0;">&nbsp;</td></tr>
   <tr>
-    <td style="padding:20px 40px 24px;">
-      <p style="margin:0;font-size:11px;color:#a3a3a3;line-height:1.6;font-family:${FONT};">
-        &#8471; &amp; &copy; 2026 ANDY&rsquo;K GROUP INTERNATIONAL LTD &nbsp;&middot;&nbsp; lab.djandykofficial.com
+    <td style="padding:24px 48px 28px;">
+      <p style="margin:0;font-family:${MONO};font-size:10px;color:#a3a3a3;letter-spacing:0.08em;text-transform:uppercase;line-height:1.7;">
+        &#8471; &amp; &copy; 2026 ANDY&rsquo;K GROUP INTERNATIONAL LTD
       </p>
     </td>
   </tr>`;
@@ -26,11 +32,12 @@ function wrap(inner: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>${GF_IMPORT}</style>
 </head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:${FONT};">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:40px 16px;">
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:${SANS};">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:48px 16px;">
     <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background:#ffffff;border:1px solid #e5e5e5;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e5e5e5;">
         ${LOGO}
         ${inner}
         ${FOOTER}
@@ -47,26 +54,32 @@ export function confirmationHtml(email: string, name: string | null, planLabel: 
   const displayName = name || email.split("@")[0];
   return wrap(`
   <tr>
-    <td style="padding:40px 40px 48px;">
-      <h1 style="margin:0 0 28px;font-size:22px;font-weight:700;color:#111111;letter-spacing:-0.02em;line-height:1.25;font-family:${FONT};">
-        You&rsquo;re on the list
+    <td style="padding:48px 48px 56px;">
+
+      <p style="margin:0 0 20px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">
+        WAITLIST &middot; EARLY ACCESS
+      </p>
+
+      <h1 style="margin:0 0 32px;font-family:${SANS};font-size:28px;font-weight:700;color:#111111;letter-spacing:-0.02em;line-height:1.2;">
+        You&rsquo;re on the <span style="font-family:${SERIF};font-style:italic;font-weight:400;">list</span>
       </h1>
 
-      <p style="margin:0 0 10px;font-size:15px;color:#111111;line-height:1.7;font-family:${FONT};">
-        Hi <strong>${displayName}</strong>,
+      <p style="margin:0 0 12px;font-family:${SANS};font-size:15px;font-weight:400;color:#111111;line-height:1.75;">
+        Hi <strong style="font-weight:600;">${displayName}</strong>,
       </p>
-      <p style="margin:0 0 10px;font-size:15px;color:#111111;line-height:1.7;font-family:${FONT};">
-        You&rsquo;re on the waitlist for <strong>${planLabel}</strong>.
+      <p style="margin:0 0 12px;font-family:${SANS};font-size:15px;font-weight:400;color:#111111;line-height:1.75;">
+        You&rsquo;re on the waitlist for <strong style="font-weight:600;">${planLabel}</strong>.
         We&rsquo;ll email you the moment Andy&rsquo;K Music Lab goes live.
       </p>
-      <p style="margin:0 0 36px;font-size:15px;color:#737373;line-height:1.7;font-family:${FONT};">
+      <p style="margin:0 0 44px;font-family:${SANS};font-size:14px;font-weight:300;color:#8a8a8a;line-height:1.75;">
         Thank you for your interest.
       </p>
 
       <a href="https://lab.djandykofficial.com"
-         style="display:inline-block;padding:14px 28px;background:#111111;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;letter-spacing:0.01em;font-family:${FONT};">
-        lab.djandykofficial.com &rarr;
+         style="display:block;width:100%;box-sizing:border-box;padding:16px 24px;background:#111111;color:#ffffff;font-family:${MONO};font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;text-align:center;">
+        LAB.DJANDYKOFFICIAL.COM &rarr;
       </a>
+
     </td>
   </tr>`);
 }
@@ -75,28 +88,38 @@ export function confirmationHtml(email: string, name: string | null, planLabel: 
 
 export function adminHtml(email: string, name: string | null, planLabel: string, timestamp: string): string {
   const rows: [string, string][] = [
-    ["Name",    name || "—"],
-    ["Email",   email],
-    ["Plan",    planLabel],
-    ["Time",    timestamp],
+    ["Name",  name || "—"],
+    ["Email", email],
+    ["Plan",  planLabel],
+    ["Time",  timestamp],
   ];
 
   const tableRows = rows.map(([label, value]) => `
     <tr>
-      <td style="padding:13px 0;border-bottom:1px solid #e5e5e5;font-size:11px;font-weight:600;color:#a3a3a3;text-transform:uppercase;letter-spacing:0.08em;width:80px;vertical-align:top;font-family:${FONT};">${label}</td>
-      <td style="padding:13px 0 13px 20px;border-bottom:1px solid #e5e5e5;font-size:14px;color:#111111;line-height:1.5;font-family:${FONT};">${value}</td>
+      <td style="padding:14px 0;border-bottom:1px solid #e5e5e5;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;text-transform:uppercase;letter-spacing:0.1em;width:72px;vertical-align:top;">
+        ${label}
+      </td>
+      <td style="padding:14px 0 14px 24px;border-bottom:1px solid #e5e5e5;font-family:${SANS};font-size:14px;font-weight:400;color:#111111;line-height:1.55;">
+        ${value}
+      </td>
     </tr>`).join("");
 
   return wrap(`
   <tr>
-    <td style="padding:40px 40px 48px;">
-      <h1 style="margin:0 0 32px;font-size:22px;font-weight:700;color:#111111;letter-spacing:-0.02em;line-height:1.25;font-family:${FONT};">
-        New signup
+    <td style="padding:48px 48px 56px;">
+
+      <p style="margin:0 0 20px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">
+        NEW SIGNUP
+      </p>
+
+      <h1 style="margin:0 0 40px;font-family:${SANS};font-size:28px;font-weight:700;color:#111111;letter-spacing:-0.02em;line-height:1.2;">
+        New <span style="font-family:${SERIF};font-style:italic;font-weight:400;">waitlist</span> entry
       </h1>
 
       <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e5e5e5;">
         ${tableRows}
       </table>
+
     </td>
   </tr>`);
 }
@@ -107,23 +130,28 @@ export function launchHtml(email: string, name: string | null): string {
   const displayName = name || email.split("@")[0];
   return wrap(`
   <tr>
-    <td style="padding:40px 40px 48px;">
-      <h1 style="margin:0 0 28px;font-size:22px;font-weight:700;color:#111111;letter-spacing:-0.02em;line-height:1.25;font-family:${FONT};">
-        Andy&rsquo;K Music Lab is live
+    <td style="padding:48px 48px 56px;">
+
+      <p style="margin:0 0 20px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">
+        ANDY&rsquo;K MUSIC LAB &middot; NOW LIVE
+      </p>
+
+      <h1 style="margin:0 0 32px;font-family:${SANS};font-size:28px;font-weight:700;color:#111111;letter-spacing:-0.02em;line-height:1.2;">
+        The Lab is <span style="font-family:${SERIF};font-style:italic;font-weight:400;">live</span>
       </h1>
 
-      <p style="margin:0 0 10px;font-size:15px;color:#111111;line-height:1.7;font-family:${FONT};">
-        Hi <strong>${displayName}</strong>,
+      <p style="margin:0 0 12px;font-family:${SANS};font-size:15px;font-weight:400;color:#111111;line-height:1.75;">
+        Hi <strong style="font-weight:600;">${displayName}</strong>,
       </p>
-      <p style="margin:0 0 36px;font-size:15px;color:#111111;line-height:1.7;font-family:${FONT};">
-        Andy&rsquo;K Music Lab is now live. BPM detection, mastering tools, and DJ set planning — ready to use.
-        Join here: <a href="https://lab.djandykofficial.com" style="color:#111111;font-weight:600;">lab.djandykofficial.com</a>
+      <p style="margin:0 0 44px;font-family:${SANS};font-size:15px;font-weight:400;color:#111111;line-height:1.75;">
+        Andy&rsquo;K Music Lab is now open. Join today.
       </p>
 
       <a href="https://lab.djandykofficial.com"
-         style="display:inline-block;padding:14px 28px;background:#111111;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;letter-spacing:0.01em;font-family:${FONT};">
-        Open the Lab &rarr;
+         style="display:block;width:100%;box-sizing:border-box;padding:16px 24px;background:#111111;color:#ffffff;font-family:${MONO};font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;text-align:center;">
+        JOIN NOW &rarr;
       </a>
+
     </td>
   </tr>`);
 }
