@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import HowItWorks from "@/components/HowItWorks";
+import ToolGate from "@/components/ToolGate";
 
 const MASTERING_STEPS = [
   { text: "Your file is loaded locally via the Web Audio API — nothing leaves your browser." },
@@ -632,11 +633,19 @@ function EQVisualizer({ bands, onChange }: { bands: [number,number,number,number
 
 // ── Main component ─────────────────────────────────────────────────────────
 export default function MasteringClient() {
-  // Admin
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(() => {
-    try { setIsAdmin(localStorage.getItem("andyk_lab_admin") === "true"); } catch {}
-  }, []);
+  // Admin — synchronous init prevents gate flash for admin users
+  const [isAdmin] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem("andyk_lab_admin") === "true"; } catch { return false; }
+  });
+
+  if (!isAdmin) return (
+    <ToolGate
+      toolName="Mastering Tool"
+      toolDesc="Normalize to -14 LUFS, apply precision EQ, stereo widening, and true-peak limiting — all in your browser."
+      defaultPlan="single"
+    />
+  );
 
   // File state
   const [file, setFile] = useState<File | null>(null);

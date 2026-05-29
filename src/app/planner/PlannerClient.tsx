@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import HowItWorks from "@/components/HowItWorks";
+import ToolGate from "@/components/ToolGate";
 
 const PLANNER_STEPS = [
   { text: "Add your tracks with BPM, Camelot key, and duration." },
@@ -171,10 +172,18 @@ function EnergyCanvas({ tracks }: { tracks: Track[] }) {
 
 // ── Main component ─────────────────────────────────────────────────────────
 export default function PlannerClient() {
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(() => {
-    try { setIsAdmin(localStorage.getItem("andyk_lab_admin") === "true"); } catch {}
-  }, []);
+  const [isAdmin] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem("andyk_lab_admin") === "true"; } catch { return false; }
+  });
+
+  if (!isAdmin) return (
+    <ToolGate
+      toolName="DJ Set Planner"
+      toolDesc="Drag & drop tracks, auto-sort by Camelot key, visualise energy flow, see transition quality labels, and export your set."
+      defaultPlan="studio"
+    />
+  );
 
   const [tracks, setTracks] = useState<Track[]>([emptyTrack(), emptyTrack(), emptyTrack()]);
   const [playlist, setPlaylist] = useState<Track[] | null>(null);
