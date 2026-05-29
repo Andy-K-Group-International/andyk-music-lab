@@ -125,8 +125,8 @@ export default function RootLayout({
                 {/* Logo + tagline */}
                 <div>
                   <div className="footer-logo mb-3">
-                    <span className="font-mono font-bold text-[#63B39A] text-base tracking-tight">Andy&apos;K</span>
-                    <span className="text-[rgba(99,179,154,0.3)] mx-2 text-base">|</span>
+                    <span className="font-mono font-bold text-[#111111] text-base tracking-tight">Andy&apos;K</span>
+                    <span className="text-[rgba(0,0,0,0.25)] mx-2 text-base">|</span>
                     <span className="text-white/70 font-medium text-base">Music Lab</span>
                   </div>
                   <p className="footer-tagline">Professional audio tools — built by DJ Andy&apos;K</p>
@@ -157,7 +157,7 @@ export default function RootLayout({
               </div>
 
               {/* Bottom row */}
-              <div className="footer-bottom" style={{ borderTop: "1px solid rgba(99,179,154,0.06)", paddingTop: 16 }}>
+              <div className="footer-bottom" style={{ borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 16 }}>
                 <span className="footer-copy">
                   © 2026 Andy&apos;K Music Lab · ANDY&apos;K GROUP INTERNATIONAL LTD
                 </span>

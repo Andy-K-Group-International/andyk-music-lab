@@ -218,9 +218,9 @@ function CamelotWheel({ detected, selected, onSelect, bpm }: WheelProps) {
             <path
               d={arcPath(cx, cy, midR + 2, outerR - 2, a1, a2)}
               fill={bActive ? color : "rgba(150,150,150,0.12)"}
-              style={{ filter: bDetected ? "drop-shadow(0 0 6px rgba(99,179,154,0.9))" : "none", cursor: "pointer", opacity: bActive ? 1 : 0.35 }}
+              style={{ filter: bDetected ? "drop-shadow(0 0 6px rgba(0,0,0,0.9))" : "none", cursor: "pointer", opacity: bActive ? 1 : 0.35 }}
               onClick={() => onSelect(bKey)}
-              stroke={bDetected ? "#7ECCA8" : "transparent"}
+              stroke={bDetected ? "#D9D9D9" : "transparent"}
               strokeWidth={bDetected ? "2" : "0"}
             />
             <text x={bxText} y={byText} textAnchor="middle" dominantBaseline="central"
@@ -233,13 +233,13 @@ function CamelotWheel({ detected, selected, onSelect, bpm }: WheelProps) {
             <path
               d={arcPath(cx, cy, innerR + 2, midR - 2, a1, a2)}
               fill={aActive ? colorLight : "rgba(150,150,150,0.08)"}
-              style={{ filter: aDetected ? "drop-shadow(0 0 5px rgba(99,179,154,0.8))" : "none", cursor: "pointer", opacity: aActive ? 1 : 0.35 }}
+              style={{ filter: aDetected ? "drop-shadow(0 0 5px rgba(0,0,0,0.8))" : "none", cursor: "pointer", opacity: aActive ? 1 : 0.35 }}
               onClick={() => onSelect(aKey)}
-              stroke={aDetected ? "#7ECCA8" : "transparent"}
+              stroke={aDetected ? "#D9D9D9" : "transparent"}
               strokeWidth={aDetected ? "2" : "0"}
             />
             <text x={axText} y={ayText} textAnchor="middle" dominantBaseline="central"
-              fontSize="9" fontWeight="600" fill={aActive ? "#2F6B58" : "#aaa"}
+              fontSize="9" fontWeight="600" fill={aActive ? "#111111" : "#aaa"}
               style={{ pointerEvents: "none", userSelect: "none", fontFamily: "var(--font-mono)" }}>
               {aKey}
             </text>
@@ -251,7 +251,7 @@ function CamelotWheel({ detected, selected, onSelect, bpm }: WheelProps) {
       <circle cx={cx} cy={cy} r={innerR - 4} fill="var(--color-bg-light)" stroke="var(--color-grid-500)" strokeWidth="1" />
       {bpm !== null ? (
         <>
-          <text x={cx} y={cy - 8} textAnchor="middle" fontSize="24" fontWeight="800" fill="#63B39A" fontFamily="var(--font-mono)">{bpm}</text>
+          <text x={cx} y={cy - 8} textAnchor="middle" fontSize="24" fontWeight="800" fill="#111111" fontFamily="var(--font-mono)">{bpm}</text>
           <text x={cx} y={cy + 12} textAnchor="middle" fontSize="10" fill="var(--color-muted-2)" fontFamily="var(--font-mono)">BPM</text>
         </>
       ) : (
@@ -352,13 +352,13 @@ export default function BpmClient() {
       bars.forEach((v, i) => {
         const bh = v * h * 0.8;
         const played = i < (x / w) * bars.length;
-        ctx.fillStyle = played ? "#63B39A" : "rgba(99,179,154,0.25)";
+        ctx.fillStyle = played ? "#111111" : "rgba(0,0,0,0.25)";
         ctx.beginPath();
         ctx.roundRect(i * bw + 1, (h - bh) / 2, bw - 2, bh, 2);
         ctx.fill();
       });
       // scan line
-      ctx.fillStyle = "rgba(99,179,154,0.7)";
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
       ctx.fillRect(x - 1, 0, 2, h);
       x = (x + 1.5) % w;
       if (Math.random() > 0.97) {
@@ -425,8 +425,8 @@ export default function BpmClient() {
   };
 
   const energyLabel = (e: number) => e >= 70 ? "High" : e >= 40 ? "Medium" : "Low";
-  const energyColor = (e: number) => e >= 70 ? "#ef4444" : e >= 40 ? "#63B39A" : "#60a5fa";
-  const danceColor = (d: number) => d >= 70 ? "#63B39A" : d >= 45 ? "#f59e0b" : "#ef4444";
+  const energyColor = (e: number) => e >= 70 ? "#ef4444" : e >= 40 ? "#111111" : "#60a5fa";
+  const danceColor = (d: number) => d >= 70 ? "#111111" : d >= 45 ? "#f59e0b" : "#ef4444";
 
   const wheelDetected = result?.camelot ?? "";
   const wheelSelected = selectedKey;
@@ -521,7 +521,7 @@ export default function BpmClient() {
               </button>
             )}
             {analyzing && (
-              <div style={{ width: "100%", padding: "14px", borderRadius: 14, background: "rgba(47,107,88,0.6)", color: "white", fontWeight: 600, textAlign: "center", fontSize: 14 }}>
+              <div style={{ width: "100%", padding: "14px", borderRadius: 14, background: "rgba(0,0,0,0.6)", color: "white", fontWeight: 600, textAlign: "center", fontSize: 14 }}>
                 <span style={{ animation: "pulse-ring 1s infinite" }}>Analyzing…</span>
               </div>
             )}
@@ -533,7 +533,7 @@ export default function BpmClient() {
                 <div className="grid grid-cols-3 gap-6 text-center mb-5">
                   <div>
                     <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 6 }}>BPM</div>
-                    <div style={{ fontSize: 52, fontWeight: 900, fontFamily: "var(--font-mono)", color: "#63B39A", lineHeight: 1 }}>{result.bpm}</div>
+                    <div style={{ fontSize: 52, fontWeight: 900, fontFamily: "var(--font-mono)", color: "#111111", lineHeight: 1 }}>{result.bpm}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 6 }}>Key</div>
@@ -580,7 +580,7 @@ export default function BpmClient() {
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
                   <span className="stat-pill">
-                    <span style={{ fontFamily: "var(--font-mono)", color: "#63B39A" }}>♪</span>
+                    <span style={{ fontFamily: "var(--font-mono)", color: "#111111" }}>♪</span>
                     Pitch: {result.pitch} Hz
                   </span>
                   <span className="stat-pill">
@@ -589,7 +589,7 @@ export default function BpmClient() {
                 </div>
 
                 <button onClick={copyExport}
-                  style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid var(--color-grid-500)", background: copied ? "rgba(99,179,154,0.12)" : "transparent", color: copied ? "#63B39A" : "var(--color-muted)", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease" }}>
+                  style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid var(--color-grid-500)", background: copied ? "rgba(0,0,0,0.12)" : "transparent", color: copied ? "#111111" : "var(--color-muted)", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease" }}>
                   {copied ? "✓ Copied to clipboard" : "Copy Report"}
                 </button>
               </div>
@@ -620,7 +620,7 @@ export default function BpmClient() {
                 <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 10, background: "var(--color-grid-300)", border: "1px solid var(--color-grid-500)", fontSize: 12 }}>
                   <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-foreground)" }}>{wheelSelected}</span>
                   <span style={{ color: "var(--color-muted-2)" }}> compatible with: </span>
-                  <span style={{ fontFamily: "var(--font-mono)", color: "#63B39A" }}>{camelotNeighbors(wheelSelected).join(", ")}</span>
+                  <span style={{ fontFamily: "var(--font-mono)", color: "#111111" }}>{camelotNeighbors(wheelSelected).join(", ")}</span>
                 </div>
               )}
               <p style={{ fontSize: 11, color: "var(--color-muted-2)", marginTop: 10, textAlign: "center", lineHeight: 1.5 }}>
@@ -665,7 +665,7 @@ export default function BpmClient() {
                     <div style={{ fontWeight: 600, fontSize: 13, color: "var(--color-foreground)" }}>{h.name}</div>
                     <div style={{ fontSize: 11, color: "var(--color-muted-2)" }}>{new Date(h.timestamp).toLocaleDateString()}</div>
                   </div>
-                  <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#63B39A", fontSize: 14 }}>{h.bpm} BPM</span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#111111", fontSize: 14 }}>{h.bpm} BPM</span>
                   <span className={`font-mono font-bold text-sm px-2 py-0.5 rounded ${h.camelot.endsWith("B") ? "camelot-B" : "camelot-A"}`}>{h.camelot}</span>
                   <span style={{ fontSize: 11, color: "var(--color-muted-2)", fontFamily: "var(--font-mono)" }}>{energyLabel(h.energy)}</span>
                 </div>

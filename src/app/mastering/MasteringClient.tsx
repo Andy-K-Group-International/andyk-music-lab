@@ -285,8 +285,8 @@ function drawStereoFan(canvas: HTMLCanvasElement, width: StereoWidth) {
     const fade = Math.cos((t - 0.5) * Math.PI) ** 2;
     const x2 = cx + r * Math.cos(angle), y2 = cy + r * Math.sin(angle);
     const grad = ctx.createLinearGradient(cx, cy, x2, y2);
-    grad.addColorStop(0, `rgba(99,179,154,${0.55 * fade})`);
-    grad.addColorStop(1, `rgba(99,179,154,0)`);
+    grad.addColorStop(0, `rgba(0,0,0,${0.55 * fade})`);
+    grad.addColorStop(1, `rgba(0,0,0,0)`);
     ctx.strokeStyle = grad; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x2, y2); ctx.stroke();
   }
@@ -294,12 +294,12 @@ function drawStereoFan(canvas: HTMLCanvasElement, width: StereoWidth) {
   const arcR = r * 0.82;
   const a1 = -Math.PI / 2 - maxAngle, a2 = -Math.PI / 2 + maxAngle;
   ctx.beginPath(); ctx.arc(cx, cy, arcR, a1, a2);
-  ctx.strokeStyle = "rgba(99,179,154,0.5)"; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.lineWidth = 1.5; ctx.stroke();
   // Center dot
   ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-  ctx.fillStyle = "#63B39A"; ctx.fill();
+  ctx.fillStyle = "#111111"; ctx.fill();
   // Width label
-  ctx.fillStyle = "rgba(99,179,154,0.8)"; ctx.font = `bold 11px var(--font-mono,monospace)`;
+  ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.font = `bold 11px var(--font-mono,monospace)`;
   ctx.textAlign = "center";
   ctx.fillText(`${Math.round(sf * 100)}%`, cx, cy - arcR - 8);
 }
@@ -323,14 +323,14 @@ function drawSpectrum(canvas: HTMLCanvasElement, level: NoiseLevel) {
     const barH = Math.max(2, (v / maxS) * h * 0.82), y = h - barH;
     const above = barH > flrH;
     const grad = ctx.createLinearGradient(0, y, 0, h);
-    grad.addColorStop(0, above ? "rgba(99,179,154,0.8)" : "rgba(239,68,68,0.6)");
-    grad.addColorStop(1, above ? "rgba(99,179,154,0.2)" : "rgba(239,68,68,0.2)");
+    grad.addColorStop(0, above ? "rgba(0,0,0,0.8)" : "rgba(239,68,68,0.6)");
+    grad.addColorStop(1, above ? "rgba(0,0,0,0.2)" : "rgba(239,68,68,0.2)");
     ctx.fillStyle = grad;
     ctx.beginPath();
     (ctx as CanvasRenderingContext2D & { roundRect: (...a: number[]) => void }).roundRect(i * (w / bins), y, bw, barH, 2);
     ctx.fill();
     ctx.beginPath(); ctx.arc(i * (w / bins) + bw / 2, y, 1.5, 0, Math.PI * 2);
-    ctx.fillStyle = above ? "#7ECCA8" : "#ef4444"; ctx.fill();
+    ctx.fillStyle = above ? "#D9D9D9" : "#ef4444"; ctx.fill();
   }
 }
 
@@ -339,12 +339,12 @@ function drawEQ(canvas: HTMLCanvasElement, bands: [number,number,number,number,n
   const w = canvas.width, h = canvas.height;
   ctx.clearRect(0, 0, w, h);
   // Grid
-  ctx.strokeStyle = "rgba(99,179,154,0.08)"; ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(0,0,0,0.08)"; ctx.lineWidth = 1;
   for (let i = 1; i < 4; i++) {
     ctx.beginPath(); ctx.moveTo(0, h * i / 4); ctx.lineTo(w, h * i / 4); ctx.stroke();
   }
   // 0dB line
-  ctx.strokeStyle = "rgba(99,179,154,0.2)"; ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
   // Freq labels
   const freqLabels = ["60", "250", "1k", "4k", "12k"];
@@ -354,7 +354,7 @@ function drawEQ(canvas: HTMLCanvasElement, bands: [number,number,number,number,n
   // Curve
   const pts = xs.map((x, i) => ({ x: x * w, y: h / 2 - (bands[i] / 12) * (h * 0.45) }));
   const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, "rgba(99,179,154,0.25)"); grad.addColorStop(1, "rgba(99,179,154,0)");
+  grad.addColorStop(0, "rgba(0,0,0,0.25)"); grad.addColorStop(1, "rgba(0,0,0,0)");
   ctx.beginPath();
   ctx.moveTo(0, h / 2);
   ctx.lineTo(pts[0].x, pts[0].y);
@@ -371,11 +371,11 @@ function drawEQ(canvas: HTMLCanvasElement, bands: [number,number,number,number,n
     const cpx = (pts[i-1].x + pts[i].x) / 2;
     ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
   }
-  ctx.strokeStyle = "#63B39A"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = "#111111"; ctx.lineWidth = 2; ctx.stroke();
   // Handles
   pts.forEach((p, i) => {
     ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-    ctx.fillStyle = "#63B39A"; ctx.fill();
+    ctx.fillStyle = "#111111"; ctx.fill();
     ctx.strokeStyle = "white"; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.fillStyle = "white"; ctx.font = `bold 8px monospace`; ctx.textAlign = "center";
     ctx.fillText(bands[i] >= 0 ? `+${bands[i]}` : `${bands[i]}`, p.x, p.y - 8);
@@ -392,7 +392,7 @@ function drawLoudnessHistory(canvas: HTMLCanvasElement, history: number[]) {
   // Grid lines
   [-24, -18, -14, -9, -6].forEach(l => {
     const y = toY(l);
-    ctx.strokeStyle = l === -14 ? "rgba(99,179,154,0.3)" : "rgba(139,147,168,0.12)";
+    ctx.strokeStyle = l === -14 ? "rgba(0,0,0,0.3)" : "rgba(139,147,168,0.12)";
     ctx.lineWidth = l === -14 ? 1.5 : 1; ctx.setLineDash(l === -14 ? [4, 4] : []);
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
     ctx.setLineDash([]);
@@ -403,7 +403,7 @@ function drawLoudnessHistory(canvas: HTMLCanvasElement, history: number[]) {
   const pts = history.map((l, i) => ({ x: i * step, y: toY(l) }));
   // Fill
   const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, "rgba(99,179,154,0.22)"); grad.addColorStop(1, "rgba(99,179,154,0)");
+  grad.addColorStop(0, "rgba(0,0,0,0.22)"); grad.addColorStop(1, "rgba(0,0,0,0)");
   ctx.beginPath();
   ctx.moveTo(0, h); ctx.lineTo(pts[0].x, pts[0].y);
   for (let i = 1; i < pts.length; i++) {
@@ -418,7 +418,7 @@ function drawLoudnessHistory(canvas: HTMLCanvasElement, history: number[]) {
     const cpx = (pts[i-1].x + pts[i].x) / 2;
     ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
   }
-  ctx.strokeStyle = "#63B39A"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = "#111111"; ctx.lineWidth = 2; ctx.stroke();
 }
 
 function computeLoudnessHistory(buf: AudioBuffer): number[] {
@@ -697,7 +697,7 @@ export default function MasteringClient() {
 
   // Canvases
   useEffect(() => {
-    if (audioBuffer && mainCanvasRef.current) drawWaveform(mainCanvasRef.current, audioBuffer, "rgb(99,179,154)", mainProgress);
+    if (audioBuffer && mainCanvasRef.current) drawWaveform(mainCanvasRef.current, audioBuffer, "rgb(17,17,17)", mainProgress);
   }, [audioBuffer, mainProgress]);
 
   useEffect(() => {
@@ -853,7 +853,7 @@ export default function MasteringClient() {
             <input ref={inputRef} type="file" accept="audio/*,.mp3,.wav" className="hidden"
               onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
             {loadingAudio ? (
-              <div style={{ color: "#63B39A", fontWeight: 600 }}>Loading audio…</div>
+              <div style={{ color: "#111111", fontWeight: 600 }}>Loading audio…</div>
             ) : (
               <>
                 <div style={{ width: 64, height: 64, borderRadius: 18, background: "var(--color-soft-green)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
@@ -880,7 +880,7 @@ export default function MasteringClient() {
               <div className="waveform-hit waveform-main" style={{ height: 88, borderRadius: 0, padding: "8px 16px" }}
                 onClick={seekMain}>
                 <canvas ref={mainCanvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
-                <div className="waveform-playhead" style={{ left: `calc(${mainProgress*100}% + 14px)`, background: "#63B39A" }} />
+                <div className="waveform-playhead" style={{ left: `calc(${mainProgress*100}% + 14px)`, background: "#111111" }} />
               </div>
               <div className="player-controls">
                 <button onClick={() => { stopMain(); setMainProgress(Math.max(0, mainProgress - 10/audioBuffer!.duration)); }} className="player-btn">
@@ -936,7 +936,7 @@ export default function MasteringClient() {
               {/* Intensity */}
               <div className="glass-card rounded-2xl p-5">
                 <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 14 }}>Mastering Intensity</div>
-                <div style={{ fontSize: 32, fontWeight: 800, fontFamily: "var(--font-mono)", color: "#63B39A", marginBottom: 4 }}>{targetLUFS}</div>
+                <div style={{ fontSize: 32, fontWeight: 800, fontFamily: "var(--font-mono)", color: "#111111", marginBottom: 4 }}>{targetLUFS}</div>
                 <div style={{ fontSize: 11, color: "var(--color-muted-2)", marginBottom: 14 }}>Target LUFS</div>
                 <LevelSelector value={intensity} onChange={v => { setIntensity(v); markCustom(); }} options={["low","medium","high"]} />
               </div>
@@ -1033,7 +1033,7 @@ export default function MasteringClient() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
                   <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-muted-2)" }}>0:00</span>
-                  <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "rgba(99,179,154,0.7)" }}>—14 LUFS (Spotify)</span>
+                  <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "rgba(0,0,0,0.7)" }}>—14 LUFS (Spotify)</span>
                   <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-muted-2)" }}>{fmt(audioBuffer!.duration)}</span>
                 </div>
               </div>
@@ -1047,11 +1047,11 @@ export default function MasteringClient() {
                 </div>
               )}
               {stage ? (
-                <div style={{ padding: "16px", borderRadius: 14, background: "rgba(47,107,88,0.08)", border: "1px solid rgba(99,179,154,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 20, height: 20, borderRadius: "50%", border: "2px solid #63B39A", borderTopColor: "transparent", animation: "spin 0.8s linear infinite" }} />
-                  <span style={{ fontWeight: 600, color: "#63B39A" }}>{stage}</span>
+                <div style={{ padding: "16px", borderRadius: 14, background: "rgba(0,0,0,0.08)", border: "1px solid rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: "50%", border: "2px solid #111111", borderTopColor: "transparent", animation: "spin 0.8s linear infinite" }} />
+                  <span style={{ fontWeight: 600, color: "#111111" }}>{stage}</span>
                   <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--color-grid-500)", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: stage === "Done!" ? "100%" : stage === "Encoding…" ? "80%" : stage === "Mastering…" ? "60%" : stage === "Applying Gain…" ? "45%" : stage === "Applying EQ…" ? "30%" : "15%", background: "#63B39A", borderRadius: 2, transition: "width 0.4s ease" }} />
+                    <div style={{ height: "100%", width: stage === "Done!" ? "100%" : stage === "Encoding…" ? "80%" : stage === "Mastering…" ? "60%" : stage === "Applying Gain…" ? "45%" : stage === "Applying EQ…" ? "30%" : "15%", background: "#111111", borderRadius: 2, transition: "width 0.4s ease" }} />
                   </div>
                 </div>
               ) : (
@@ -1077,7 +1077,7 @@ export default function MasteringClient() {
                   <MiniPlayer buffer={audioBuffer} url={originalUrl} label="ORIGINAL" accentColor="rgb(99,130,154)"
                     isActive={activePlayer === "before"} onActivate={() => setActivePlayer("before")}
                     stats={{ lufs: analysis!.lufs, peak: analysis!.peak, dr: analysis!.dr }} />
-                  <MiniPlayer buffer={result.buffer} url={result.url} label="MASTERED" accentColor="rgb(99,179,154)"
+                  <MiniPlayer buffer={result.buffer} url={result.url} label="MASTERED" accentColor="rgb(17,17,17)"
                     isActive={activePlayer === "after"} onActivate={() => setActivePlayer("after")}
                     stats={result.stats} />
                 </div>

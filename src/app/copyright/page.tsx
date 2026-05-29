@@ -11,15 +11,15 @@ export default function Copyright() {
     <div className="tool-page-bg min-h-screen py-16 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="glass-card p-8 md:p-12">
-          <p className="font-mono text-xs text-[#63B39A] tracking-widest uppercase mb-4">Legal</p>
+          <p className="font-mono text-xs text-[#111111] tracking-widest uppercase mb-4">Legal</p>
           <h1 className="text-3xl font-bold mb-2">Copyright Notice</h1>
           <p className="text-sm font-mono opacity-40 mb-10">Last updated: 1 May 2026</p>
 
           <div className="prose-legal">
 
-            <div className="copyright-notice-block text-center py-8 mb-8" style={{ borderTop: "1px solid rgba(99,179,154,0.15)", borderBottom: "1px solid rgba(99,179,154,0.15)" }}>
+            <div className="copyright-notice-block text-center py-8 mb-8" style={{ borderTop: "1px solid rgba(0,0,0,0.15)", borderBottom: "1px solid rgba(0,0,0,0.15)" }}>
               <p className="text-2xl font-bold tracking-wide mb-2">℗ &amp; © 2026</p>
-              <p className="text-xl font-mono text-[#63B39A] tracking-widest uppercase">ANDY&apos;K GROUP INTERNATIONAL LTD</p>
+              <p className="text-xl font-mono text-[#111111] tracking-widest uppercase">ANDY&apos;K GROUP INTERNATIONAL LTD</p>
               <p className="text-sm opacity-40 mt-2">All Rights Reserved</p>
             </div>
 
@@ -36,7 +36,7 @@ export default function Copyright() {
             <p>
               All music, sound recordings, mixes, and audio releases associated with the DJ Andy&apos;K brand are:
             </p>
-            <p className="font-mono text-[#63B39A] text-center py-2">
+            <p className="font-mono text-[#111111] text-center py-2">
               ℗ &amp; © ANDY&apos;K GROUP INTERNATIONAL LTD. All Rights Reserved.
             </p>
             <p>

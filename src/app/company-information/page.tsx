@@ -11,7 +11,7 @@ export default function CompanyInformation() {
     <div className="tool-page-bg min-h-screen py-16 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="glass-card p-8 md:p-12">
-          <p className="font-mono text-xs text-[#63B39A] tracking-widest uppercase mb-4">Legal</p>
+          <p className="font-mono text-xs text-[#111111] tracking-widest uppercase mb-4">Legal</p>
           <h1 className="text-3xl font-bold mb-2">Company Information</h1>
           <p className="text-sm font-mono opacity-40 mb-10">Andy&apos;K Music Lab is operated by:</p>
 

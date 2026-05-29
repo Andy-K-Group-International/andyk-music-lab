@@ -48,7 +48,7 @@ export default function Navbar() {
             className="nav-back-link hidden sm:block">
             ← djandykofficial.com
           </a>
-          <div className="w-px h-5 hidden sm:block" style={{ background: "rgba(99,179,154,0.15)" }} />
+          <div className="w-px h-5 hidden sm:block" style={{ background: "rgba(0,0,0,0.12)" }} />
 
           <button onClick={toggle}
             aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
@@ -81,7 +81,7 @@ export default function Navbar() {
             className="mobile-nav-link" onClick={() => setMenuOpen(false)}>
             About ↗
           </a>
-          <div style={{ height: 1, background: "rgba(99,179,154,0.08)", margin: "6px 12px" }} />
+          <div style={{ height: 1, background: "rgba(0,0,0,0.08)", margin: "6px 12px" }} />
           <a href="https://djandykofficial.com" target="_blank" rel="noopener noreferrer"
             className="mobile-nav-link" style={{ fontSize: 12, opacity: 0.55 }}
             onClick={() => setMenuOpen(false)}>

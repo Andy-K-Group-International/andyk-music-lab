@@ -49,7 +49,7 @@ function compatibility(a: string, b: string): "perfect" | "good" | "risky" | "av
 }
 
 const COMPAT_COLORS: Record<string, { bg: string; text: string; label: string; dot: string }> = {
-  perfect: { bg: "rgba(99,179,154,0.12)", text: "#2F6B58", label: "Perfect", dot: "#63B39A" },
+  perfect: { bg: "rgba(0,0,0,0.12)", text: "#111111", label: "Perfect", dot: "#111111" },
   good:    { bg: "rgba(59,130,246,0.1)",  text: "#1d4ed8", label: "Good",    dot: "#3b82f6" },
   risky:   { bg: "rgba(245,158,11,0.1)",  text: "#92400e", label: "Risky",   dot: "#f59e0b" },
   avoid:   { bg: "rgba(239,68,68,0.1)",   text: "#991b1b", label: "Avoid",   dot: "#ef4444" },
@@ -135,7 +135,7 @@ function EnergyCanvas({ tracks }: { tracks: Track[] }) {
 
     if (pts.length > 1) {
       ctx.beginPath();
-      ctx.strokeStyle = "#63B39A";
+      ctx.strokeStyle = "#111111";
       ctx.lineWidth = 2;
       ctx.moveTo(pts[0].x, pts[0].y);
       for (let i = 1; i < pts.length; i++) {
@@ -146,7 +146,7 @@ function EnergyCanvas({ tracks }: { tracks: Track[] }) {
       pts.forEach(p => {
         ctx.beginPath();
         ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-        ctx.fillStyle = "#63B39A";
+        ctx.fillStyle = "#111111";
         ctx.fill();
       });
     }
@@ -295,7 +295,7 @@ export default function PlannerClient() {
               <input type="number" value={minBPM} min={0} max={maxBPM} onChange={e => setMinBPM(+e.target.value)}
                 style={{ width: 64, padding: "6px 8px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontFamily: "var(--font-mono)", fontSize: 13, outline: "none" }} />
               <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--color-grid-500)", position: "relative" }}>
-                <div style={{ position: "absolute", left: `${(minBPM / 200) * 100}%`, right: `${100 - (maxBPM / 200) * 100}%`, top: 0, bottom: 0, background: "#63B39A", borderRadius: 2 }} />
+                <div style={{ position: "absolute", left: `${(minBPM / 200) * 100}%`, right: `${100 - (maxBPM / 200) * 100}%`, top: 0, bottom: 0, background: "#111111", borderRadius: 2 }} />
               </div>
               <input type="number" value={maxBPM} min={minBPM} max={200} onChange={e => setMaxBPM(+e.target.value)}
                 style={{ width: 64, padding: "6px 8px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontFamily: "var(--font-mono)", fontSize: 13, outline: "none" }} />
@@ -334,20 +334,20 @@ export default function PlannerClient() {
                   onDragEnd={onDragEnd}
                   style={{
                     opacity: isDragging ? 0.4 : dimmed ? 0.45 : 1,
-                    border: `1px solid ${isDropTarget ? "#63B39A" : "transparent"}`,
-                    background: isDropTarget ? "rgba(99,179,154,0.06)" : "transparent",
+                    border: `1px solid ${isDropTarget ? "#111111" : "transparent"}`,
+                    background: isDropTarget ? "rgba(0,0,0,0.06)" : "transparent",
                   }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ width: 3, height: 24, borderRadius: 2, background: track.camelot ? camelotHSL(track.camelot) : "var(--color-grid-500)", flexShrink: 0 }} />
                     <input type="text" placeholder="Track name…" value={track.title} onChange={e => update(track.id, "title", e.target.value)}
                       style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontSize: 13, outline: "none", transition: "border-color 0.15s ease" }}
-                      onFocus={e => (e.target.style.borderColor = "#63B39A")}
+                      onFocus={e => (e.target.style.borderColor = "#111111")}
                       onBlur={e => (e.target.style.borderColor = "var(--color-grid-500)")} />
                   </div>
                   <div className="planner-row-fields">
                     <input type="number" placeholder="128" value={track.bpm} onChange={e => update(track.id, "bpm", e.target.value)}
                       style={{ width: 80, padding: "7px 10px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontSize: 13, fontFamily: "var(--font-mono)", outline: "none" }}
-                      onFocus={e => (e.target.style.borderColor = "#63B39A")} onBlur={e => (e.target.style.borderColor = "var(--color-grid-500)")} />
+                      onFocus={e => (e.target.style.borderColor = "#111111")} onBlur={e => (e.target.style.borderColor = "var(--color-grid-500)")} />
                     <select value={track.camelot} onChange={e => update(track.id, "camelot", e.target.value)}
                       style={{ width: 90, padding: "7px 8px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontSize: 13, fontFamily: "var(--font-mono)", outline: "none" }}>
                       <option value="">—</option>
@@ -355,7 +355,7 @@ export default function PlannerClient() {
                     </select>
                     <input type="text" placeholder="5:00" value={track.duration} onChange={e => update(track.id, "duration", e.target.value)}
                       style={{ width: 80, padding: "7px 8px", borderRadius: 8, border: "1px solid var(--color-grid-500)", background: "var(--color-grid-300)", color: "var(--color-foreground)", fontSize: 13, fontFamily: "var(--font-mono)", outline: "none" }}
-                      onFocus={e => (e.target.style.borderColor = "#63B39A")} onBlur={e => (e.target.style.borderColor = "var(--color-grid-500)")} />
+                      onFocus={e => (e.target.style.borderColor = "#111111")} onBlur={e => (e.target.style.borderColor = "var(--color-grid-500)")} />
                   </div>
                   <button onClick={() => removeTrack(track.id)}
                     style={{ width: 36, height: 36, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "1px solid var(--color-grid-500)", color: "var(--color-muted-2)", cursor: "pointer", fontSize: 18, transition: "all 0.15s ease" }}
@@ -369,14 +369,14 @@ export default function PlannerClient() {
           </div>
 
           <button onClick={addTrack}
-            style={{ marginTop: 12, fontSize: 13, color: "#63B39A", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+            style={{ marginTop: 12, fontSize: 13, color: "#111111", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
             + Add track
           </button>
         </div>
 
         {/* Build button */}
         <button onClick={buildPlaylist} disabled={validCount < 2}
-          style={{ width: "100%", padding: "14px", borderRadius: 14, background: validCount >= 2 ? "linear-gradient(135deg, #2F6B58, #3d8c70)" : "var(--color-grid-500)", color: "white", fontWeight: 600, fontSize: 15, cursor: validCount >= 2 ? "pointer" : "not-allowed", border: "none", boxShadow: validCount >= 2 ? "0 4px 20px rgba(47,107,88,0.3)" : "none", transition: "all 0.25s ease", marginBottom: 32 }}>
+          style={{ width: "100%", padding: "14px", borderRadius: 14, background: validCount >= 2 ? "linear-gradient(135deg, #111111, #333333)" : "var(--color-grid-500)", color: "white", fontWeight: 600, fontSize: 15, cursor: validCount >= 2 ? "pointer" : "not-allowed", border: "none", boxShadow: validCount >= 2 ? "0 4px 20px rgba(0,0,0,0.3)" : "none", transition: "all 0.25s ease", marginBottom: 32 }}>
           {validCount < 2 ? `Add at least 2 tracks with Camelot keys` : "Build Harmonic Playlist"}
         </button>
 
@@ -390,11 +390,11 @@ export default function PlannerClient() {
               </h2>
               <div className="planner-export-btns" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button onClick={exportText}
-                  style={{ padding: "8px 14px", borderRadius: 9, border: "1px solid var(--color-grid-500)", background: copied ? "rgba(99,179,154,0.1)" : "transparent", color: copied ? "#63B39A" : "var(--color-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease" }}>
+                  style={{ padding: "8px 14px", borderRadius: 9, border: "1px solid var(--color-grid-500)", background: copied ? "rgba(0,0,0,0.1)" : "transparent", color: copied ? "#111111" : "var(--color-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease" }}>
                   {copied ? "✓ Copied" : "Copy Text"}
                 </button>
                 <button onClick={exportRekordbox}
-                  style={{ padding: "8px 14px", borderRadius: 9, border: "1px solid rgba(99,179,154,0.3)", background: "rgba(99,179,154,0.08)", color: "var(--color-deep-teal)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  style={{ padding: "8px 14px", borderRadius: 9, border: "1px solid rgba(0,0,0,0.3)", background: "rgba(0,0,0,0.08)", color: "var(--color-deep-teal)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                   Export Rekordbox XML
                 </button>
               </div>
