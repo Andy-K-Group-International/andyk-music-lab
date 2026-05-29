@@ -209,6 +209,7 @@ body {
 .section-dark { background: #111111; transition: background 0.25s ease; }
 .section-dark .section-label { color: rgba(255,255,255,0.45); }
 .section-dark .section-heading { color: #ffffff; }
+.section-dark .section-heading .serif-accent { color: #D9D9D9; }
 .section-dark .section-subtext { color: #A8A8A8; }
 .section-darkest { background: var(--color-grid-500); transition: background 0.25s ease; }
 .section-surface { background: var(--color-bg-light); transition: background 0.25s ease; }
@@ -270,7 +271,7 @@ body {
 .pricing-card:hover:not(.featured) { border-color: rgba(0,0,0,0.2); transform: translateY(-4px); }
 .pricing-card.featured { border-color: rgba(0,0,0,0.38); background: #1a1a1a; box-shadow: 0 0 70px rgba(0,0,0,0.1); transform: scale(1.03); position: relative; z-index: 1; }
 .pricing-card.featured:hover { transform: scale(1.03) translateY(-6px); }
-.pricing-badge { display: inline-block; font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #01011b; background: #111111; padding: 5px 14px; border-radius: 100px; margin-bottom: 24px; align-self: flex-start; }
+.pricing-badge { display: inline-block; font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #ffffff; background: #111111; padding: 5px 14px; border-radius: 100px; margin-bottom: 24px; align-self: flex-start; }
 .pricing-price { font-size: 48px; font-weight: 800; color: var(--color-foreground); letter-spacing: -0.04em; line-height: 1; transition: color 0.25s ease; }
 .pricing-period { font-size: 15px; color: var(--color-muted-2); margin-left: 5px; vertical-align: middle; }
 .pricing-name { font-size: 16px; font-weight: 600; color: var(--color-muted); margin-top: 10px; margin-bottom: 6px; letter-spacing: -0.01em; }
