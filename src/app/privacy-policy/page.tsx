@@ -24,7 +24,7 @@ export default function PrivacyPolicy() {
               86-90 Paul Street, London, EC2A 4NE, United Kingdom.
             </p>
             <p>
-              Contact: <a href="mailto:info@djandykofficial.com">info@djandykofficial.com</a>
+              Contact: <a href="mailto:ceo@andykgroup.com">ceo@andykgroup.com</a>
             </p>
 
             <h2>2. What Data We Collect</h2>
@@ -70,7 +70,7 @@ export default function PrivacyPolicy() {
               <li>Data portability</li>
               <li>Lodge a complaint with the ICO (ico.org.uk)</li>
             </ul>
-            <p>To exercise any of these rights, contact us at <a href="mailto:info@djandykofficial.com">info@djandykofficial.com</a>.</p>
+            <p>To exercise any of these rights, contact us at <a href="mailto:ceo@andykgroup.com">ceo@andykgroup.com</a>.</p>
 
             <h2>7. Third-Party Services</h2>
             <p>We use the following third-party services which may process your data:</p>
@@ -95,7 +95,7 @@ export default function PrivacyPolicy() {
             <p>
               ANDY&apos;K GROUP INTERNATIONAL LTD<br />
               86-90 Paul Street, London, EC2A 4NE<br />
-              <a href="mailto:info@djandykofficial.com">info@djandykofficial.com</a>
+              <a href="mailto:ceo@andykgroup.com">ceo@andykgroup.com</a>
             </p>
           </div>
         </div>

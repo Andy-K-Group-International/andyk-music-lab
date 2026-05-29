@@ -76,7 +76,7 @@ export default function CookiesPolicy() {
             <h2>5. Contact</h2>
             <p>
               If you have questions about our use of cookies, contact us at{" "}
-              <a href="mailto:info@djandykofficial.com">info@djandykofficial.com</a>.
+              <a href="mailto:ceo@andykgroup.com">ceo@andykgroup.com</a>.
             </p>
             <p>
               ANDY&apos;K GROUP INTERNATIONAL LTD<br />

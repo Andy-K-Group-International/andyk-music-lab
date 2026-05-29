@@ -69,7 +69,7 @@ export default function Disclaimer() {
             <p>
               ANDY&apos;K GROUP INTERNATIONAL LTD<br />
               86-90 Paul Street, London, EC2A 4NE<br />
-              <a href="mailto:info@djandykofficial.com">info@djandykofficial.com</a>
+              <a href="mailto:ceo@andykgroup.com">ceo@andykgroup.com</a>
             </p>
           </div>
         </div>

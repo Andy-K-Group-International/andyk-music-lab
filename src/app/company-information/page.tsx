@@ -46,7 +46,7 @@ export default function CompanyInformation() {
                   <tr>
                     <th>Email</th>
                     <td>
-                      <a href="mailto:info@djandykofficial.com">info@djandykofficial.com</a>
+                      <a href="mailto:ceo@andykgroup.com">ceo@andykgroup.com</a>
                     </td>
                   </tr>
                   <tr>
