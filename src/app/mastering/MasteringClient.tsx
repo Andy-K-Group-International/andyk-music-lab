@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import HowItWorks from "@/components/HowItWorks";
-import ToolGate from "@/components/ToolGate";
 
 const MASTERING_STEPS = [
   { text: "Your file is loaded locally via the Web Audio API — nothing leaves your browser." },
@@ -639,13 +638,10 @@ export default function MasteringClient() {
     try { return localStorage.getItem("andyk_lab_admin") === "true"; } catch { return false; }
   });
 
-  if (!isAdmin) return (
-    <ToolGate
-      toolName="Mastering Tool"
-      toolDesc="Normalize to -14 LUFS, apply precision EQ, stereo widening, and true-peak limiting — all in your browser."
-      defaultPlan="single"
-    />
-  );
+  if (!isAdmin) {
+    if (typeof window !== "undefined") window.location.replace("/admin");
+    return null;
+  }
 
   // File state
   const [file, setFile] = useState<File | null>(null);

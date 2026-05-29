@@ -22,7 +22,7 @@ export default function AdminPage() {
 
     if (email === ADMIN_EMAIL && password === correctPassword) {
       try { localStorage.setItem(ADMIN_KEY, "true"); } catch {}
-      router.push("/");
+      router.push("/dashboard");
     } else {
       setError("Invalid credentials");
       setPassword("");

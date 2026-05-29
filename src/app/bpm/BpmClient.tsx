@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import HowItWorks from "@/components/HowItWorks";
-import ToolGate from "@/components/ToolGate";
 
 const BPM_STEPS = [
   { text: "Your audio is loaded into an AudioBuffer via the Web Audio API." },
@@ -326,13 +325,10 @@ export default function BpmClient() {
     try { return localStorage.getItem("andyk_lab_admin") === "true"; } catch { return false; }
   });
 
-  if (!isAdmin) return (
-    <ToolGate
-      toolName="BPM + Key Detector"
-      toolDesc="Instant BPM via autocorrelation, musical key via Krumhansl-Schmuckler, Camelot wheel, Tap BPM, and danceability score."
-      defaultPlan="studio"
-    />
-  );
+  if (!isAdmin) {
+    if (typeof window !== "undefined") window.location.replace("/admin");
+    return null;
+  }
 
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);

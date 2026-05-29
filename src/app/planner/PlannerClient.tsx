@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import HowItWorks from "@/components/HowItWorks";
-import ToolGate from "@/components/ToolGate";
 
 const PLANNER_STEPS = [
   { text: "Add your tracks with BPM, Camelot key, and duration." },
@@ -177,13 +176,10 @@ export default function PlannerClient() {
     try { return localStorage.getItem("andyk_lab_admin") === "true"; } catch { return false; }
   });
 
-  if (!isAdmin) return (
-    <ToolGate
-      toolName="DJ Set Planner"
-      toolDesc="Drag & drop tracks, auto-sort by Camelot key, visualise energy flow, see transition quality labels, and export your set."
-      defaultPlan="studio"
-    />
-  );
+  if (!isAdmin) {
+    if (typeof window !== "undefined") window.location.replace("/admin");
+    return null;
+  }
 
   const [tracks, setTracks] = useState<Track[]>([emptyTrack(), emptyTrack(), emptyTrack()]);
   const [playlist, setPlaylist] = useState<Track[] | null>(null);
