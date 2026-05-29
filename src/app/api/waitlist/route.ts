@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const SUPABASE_URL = "https://lltxttphmtxtmatlsyto.supabase.co";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const FROM = "noreply@andykgroup.com";
 
 const PLAN_LABELS: Record<string, string> = {
