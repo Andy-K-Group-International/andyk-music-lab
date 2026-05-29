@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono, Playfair_Display, DM_Sans } from "next/font/google";
-import { ThemeProvider } from "@/context/ThemeContext";
 import Navbar from "@/components/Navbar";
 import AdminUnlock from "@/components/AdminUnlock";
 import Link from "next/link";
@@ -81,14 +80,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="light">
       <head>
-        {/* Prevent theme flash — runs before React hydration */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('djandyk-theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}`,
-          }}
-        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -113,7 +106,6 @@ export default function RootLayout({
       <body
         className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${playfair.variable} ${dmSans.variable} antialiased font-sans min-h-screen`}
       >
-        <ThemeProvider>
           <Navbar />
           <main className="pt-16">{children}</main>
 
@@ -174,7 +166,6 @@ export default function RootLayout({
 
             </div>
           </footer>
-        </ThemeProvider>
       </body>
     </html>
   );
