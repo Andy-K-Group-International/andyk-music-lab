@@ -149,6 +149,9 @@ export default function RootLayout({
                     {l.label}
                   </Link>
                 ))}
+                <Link href="/admin" className="footer-link" style={{ fontSize: 10, opacity: 0.4 }}>
+                  Admin
+                </Link>
               </div>
 
               {/* Bottom row */}
