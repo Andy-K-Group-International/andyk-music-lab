@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import WaitlistForm, { type WaitlistPlan } from "@/components/WaitlistForm";
+import { CURRENCIES, type Currency, convert } from "@/lib/currency";
 
 // ── SVG Icons ────────────────────────────────────────────────────────────────
 
@@ -176,10 +177,10 @@ const stats = [
   { icon: <IconCheck />, value: "Industry Standards",  desc: "Spotify -14 LUFS · Apple Music -16 LUFS · -0.3 dBTP true-peak limit — streaming platforms ready." },
 ];
 
-const pricing: { name: string; price: string; period: string; desc: string; features: string[]; featured: boolean; plan: WaitlistPlan }[] = [
-  { name: "Single Session", price: "£49",  period: "one-time", plan: "single", featured: false, desc: "One professional mastering session for a single track.", features: ["1 track mastered", "-14 LUFS / -0.3 dBTP", "WAV + MP3 download", "24h turnaround"] },
-  { name: "Studio Pass",    price: "£29",  period: "/month",   plan: "studio", featured: false, desc: "For producers releasing regularly.",                     features: ["Unlimited masterings", "BPM + Key detector", "DJ Set Planner", "Priority processing", "Stem separation"] },
-  { name: "Pro Pass",       price: "£199", period: "/year",    plan: "pro",    featured: true,  desc: "Everything in Studio Pass — billed annually, save £149.", features: ["All Studio Pass features", "Save £149 vs monthly", "Early access to new tools", "Label export formats", "Dedicated support"] },
+const pricing: { name: string; gbpPrice: number; period: string; desc: string; features: string[]; featured: boolean; plan: WaitlistPlan }[] = [
+  { name: "Single Session", gbpPrice: 49,  period: "one-time", plan: "single", featured: false, desc: "One professional mastering session for a single track.", features: ["1 track mastered", "-14 LUFS / -0.3 dBTP", "WAV + MP3 download", "24h turnaround"] },
+  { name: "Studio Pass",    gbpPrice: 29,  period: "/month",   plan: "studio", featured: false, desc: "For producers releasing regularly.",                     features: ["Unlimited masterings", "BPM + Key detector", "DJ Set Planner", "Priority processing", "Stem separation"] },
+  { name: "Pro Pass",       gbpPrice: 199, period: "/year",    plan: "pro",    featured: true,  desc: "Everything in Studio Pass — billed annually.", features: ["All Studio Pass features", "SAVE_VS_MONTHLY", "Early access to new tools", "Label export formats", "Dedicated support"] },
 ];
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -191,6 +192,19 @@ export default function HomeClient() {
   const [waitlistPlan, setWaitlistPlan] = useState<WaitlistPlan>("studio");
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [spots, setSpots] = useState<Spots | null>(null);
+  const [currency, setCurrency] = useState<Currency>("GBP");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("andyk_currency") as Currency;
+      if (saved && (CURRENCIES as readonly string[]).includes(saved)) setCurrency(saved);
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleCurrency = (c: Currency) => {
+    setCurrency(c);
+    try { localStorage.setItem("andyk_currency", c); } catch { /* ignore */ }
+  };
 
   const fetchSpots = useCallback(async () => {
     try {
@@ -379,6 +393,32 @@ export default function HomeClient() {
             </div>
           </ScrollReveal>
 
+          {/* Currency selector */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
+            {CURRENCIES.map(c => (
+              <button
+                key={c}
+                onClick={() => handleCurrency(c)}
+                style={{
+                  padding: "4px 14px",
+                  borderRadius: 20,
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  background: currency === c ? "#ffffff" : "transparent",
+                  color: currency === c ? "#111111" : "rgba(255,255,255,0.45)",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+
           {spots && (
             <div style={{
               background: "rgba(255,255,255,0.05)",
@@ -413,14 +453,14 @@ export default function HomeClient() {
                   <div className="mb-2">
                     {plan.plan === "pro" && spots && !spots.closed ? (
                       <>
-                        <span className="pricing-price" style={{ textDecoration: "line-through", opacity: 0.45, fontSize: "1.1rem" }}>{plan.price}</span>
-                        <span className="pricing-price" style={{ marginLeft: 8 }}>£119</span>
+                        <span className="pricing-price" style={{ textDecoration: "line-through", opacity: 0.45, fontSize: "1.1rem" }}>{convert(plan.gbpPrice, currency)}</span>
+                        <span className="pricing-price" style={{ marginLeft: 8 }}>{convert(119, currency)}</span>
                         <span className="pricing-period">{plan.period}</span>
                         <span style={{ marginLeft: 10, padding: "2px 8px", borderRadius: 6, background: "#16a34a", color: "#fff", fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.08em", verticalAlign: "middle" }}>40% OFF</span>
                       </>
                     ) : (
                       <>
-                        <span className="pricing-price">{plan.price}</span>
+                        <span className="pricing-price">{convert(plan.gbpPrice, currency)}</span>
                         <span className="pricing-period">{plan.period}</span>
                       </>
                     )}
@@ -431,7 +471,7 @@ export default function HomeClient() {
                     {plan.features.map((f) => (
                       <div key={f} className="pricing-feature">
                         <span className="pricing-check">✓</span>
-                        <span>{f}</span>
+                        <span>{f === "SAVE_VS_MONTHLY" ? `Save ${convert(149, currency)} vs monthly` : f}</span>
                       </div>
                     ))}
                   </div>
