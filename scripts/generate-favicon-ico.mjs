@@ -12,6 +12,7 @@ const sizes = [16, 32];
 const buffers = await Promise.all(sizes.map(s =>
   sharp(src)
     .resize(s, s, { fit: "contain", background: { r: 255, g: 255, b: 255, alpha: 1 } })
+    .ensureAlpha()
     .png()
     .toBuffer()
 ));
