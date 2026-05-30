@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
@@ -209,6 +210,15 @@ export default function HomeClient() {
           </ScrollReveal>
 
           <ScrollReveal delay={1}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+              <Image
+                src="/logo-3d.png"
+                alt="Andy'K Music Lab"
+                width={180}
+                height={180}
+                style={{ mixBlendMode: "multiply" }}
+              />
+            </div>
             <h1 className="hero-title">
               Andy&apos;K<br />
               <span className="serif-accent">Music</span> Lab
