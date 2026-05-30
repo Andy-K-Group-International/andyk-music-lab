@@ -14,11 +14,12 @@ const PLAN_LABELS: Record<WaitlistPlan, string> = {
 interface Props {
   initialPlan?: WaitlistPlan;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 type Status = "idle" | "submitting" | "success" | "duplicate" | "error";
 
-export default function WaitlistForm({ initialPlan = "studio", onClose }: Props) {
+export default function WaitlistForm({ initialPlan = "studio", onClose, onSuccess }: Props) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [plan, setPlan] = useState<WaitlistPlan>(initialPlan);
@@ -42,6 +43,7 @@ export default function WaitlistForm({ initialPlan = "studio", onClose }: Props)
 
       if (res.ok) {
         setStatus("success");
+        onSuccess?.();
       } else if (res.status === 409) {
         setStatus("duplicate");
       } else {

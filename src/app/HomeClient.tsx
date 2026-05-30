@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import WaitlistForm, { type WaitlistPlan } from "@/components/WaitlistForm";
@@ -184,10 +184,22 @@ const pricing: { name: string; price: string; period: string; desc: string; feat
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+type Spots = { spots_left: number; total: number; closed: boolean };
+
 export default function HomeClient() {
   const router = useRouter();
   const [waitlistPlan, setWaitlistPlan] = useState<WaitlistPlan>("studio");
   const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [spots, setSpots] = useState<Spots | null>(null);
+
+  const fetchSpots = useCallback(async () => {
+    try {
+      const res = await fetch("/api/spots", { cache: "no-store" });
+      if (res.ok) setSpots(await res.json());
+    } catch { /* non-critical */ }
+  }, []);
+
+  useEffect(() => { fetchSpots(); }, [fetchSpots]);
 
   const openWaitlist = (plan: WaitlistPlan = "studio") => {
     setWaitlistPlan(plan);
@@ -196,7 +208,7 @@ export default function HomeClient() {
 
   return (
     <div>
-      {waitlistOpen && <WaitlistForm initialPlan={waitlistPlan} onClose={() => setWaitlistOpen(false)} />}
+      {waitlistOpen && <WaitlistForm initialPlan={waitlistPlan} onClose={() => setWaitlistOpen(false)} onSuccess={fetchSpots} />}
 
       {/* ── HERO ── */}
       <section className="hero-section">
@@ -367,14 +379,51 @@ export default function HomeClient() {
             </div>
           </ScrollReveal>
 
+          {spots && (
+            <div style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 10,
+              padding: "14px 24px",
+              marginBottom: 32,
+              textAlign: "center",
+            }}>
+              {spots.closed ? (
+                <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.45)", margin: 0 }}>
+                  Early access closed — join waitlist for next round
+                </p>
+              ) : (
+                <>
+                  <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.85)", margin: "0 0 4px 0" }}>
+                    EARLY ACCESS — First 40 members get 40% off the yearly plan
+                  </p>
+                  <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", color: spots.spots_left <= 5 ? "#f87171" : "rgba(255,255,255,0.45)", margin: 0 }}>
+                    {spots.spots_left} spot{spots.spots_left === 1 ? "" : "s"} remaining
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="grid md:grid-cols-3 gap-6 items-stretch">
             {pricing.map((plan, i) => (
               <ScrollReveal key={plan.name} delay={(i % 3) as 0 | 1 | 2 | 3}>
                 <div className={`pricing-card h-full ${plan.featured ? "featured" : ""}`}>
                   {plan.featured && <span className="pricing-badge">Most Popular</span>}
                   <div className="mb-2">
-                    <span className="pricing-price">{plan.price}</span>
-                    <span className="pricing-period">{plan.period}</span>
+                    {plan.plan === "pro" && spots && !spots.closed ? (
+                      <>
+                        <span className="pricing-price" style={{ textDecoration: "line-through", opacity: 0.45, fontSize: "1.1rem" }}>{plan.price}</span>
+                        <span className="pricing-price" style={{ marginLeft: 8 }}>£119</span>
+                        <span className="pricing-period">{plan.period}</span>
+                        <span style={{ marginLeft: 10, padding: "2px 8px", borderRadius: 6, background: "#16a34a", color: "#fff", fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.08em", verticalAlign: "middle" }}>40% OFF</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="pricing-price">{plan.price}</span>
+                        <span className="pricing-period">{plan.period}</span>
+                      </>
+                    )}
                   </div>
                   <div className="pricing-name">{plan.name}</div>
                   <p className="pricing-desc">{plan.desc}</p>
