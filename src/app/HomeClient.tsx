@@ -212,11 +212,10 @@ export default function HomeClient() {
           <ScrollReveal delay={1}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
               <Image
-                src="/logo-3d.png"
+                src="/logo-transparent.png"
                 alt="Andy'K Music Lab"
                 width={180}
                 height={180}
-                style={{ mixBlendMode: "multiply" }}
               />
             </div>
             <h1 className="hero-title">
