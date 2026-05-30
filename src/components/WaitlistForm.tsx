@@ -146,7 +146,7 @@ export default function WaitlistForm({ initialPlan = "studio", onClose }: Props)
                       cursor: "pointer", transition: "all 0.15s ease",
                     }}
                   >
-                    {p === "single" ? "£49 one-time" : p === "studio" ? "£19/mo" : "£149/yr"}
+                    {p === "single" ? "£49 one-time" : p === "studio" ? "£29/mo" : "£199/yr"}
                   </button>
                 ))}
               </div>

@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   }
   if (!sbRes.ok) return NextResponse.json({ ok: false, error: "db error" }, { status: 500 });
 
-  const planLabel = PLAN_LABELS[plan] ?? "Studio Pass — £19/month";
+  const planLabel = PLAN_LABELS[plan] ?? "Studio Pass — £29/month";
   const timestamp = new Date().toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" });
 
   await Promise.allSettled([
