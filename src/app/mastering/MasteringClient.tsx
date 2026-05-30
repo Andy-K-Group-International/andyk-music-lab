@@ -654,16 +654,6 @@ function EQVisualizer({ bands, onChange }: { bands: [number,number,number,number
 
 // ── Main component ─────────────────────────────────────────────────────────
 export default function MasteringClient() {
-  // Admin — synchronous init prevents gate flash for admin users
-  const [isAdmin] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try { return localStorage.getItem("andyk_lab_admin") === "true"; } catch { return false; }
-  });
-
-  if (!isAdmin) {
-    if (typeof window !== "undefined") window.location.replace("/admin");
-    return null;
-  }
 
   // Batch state
   const [batchFiles, setBatchFiles] = useState<File[]>([]);
@@ -806,14 +796,14 @@ export default function MasteringClient() {
       setMetadata((m: MetadataState) => ({ ...m, title: f.name.replace(/\.[^.]+$/, "") }));
       const hist = computeLoudnessHistory(buffer);
       setLoudnessHistory(hist);
-      const ana = await analyzeBuffer(buffer, isAdmin);
+      const ana = await analyzeBuffer(buffer, true);
       setAnalysis(ana);
     } catch {
       setError("Failed to decode audio. Please try an MP3 or WAV.");
     } finally {
       setLoadingAudio(false);
     }
-  }, [isAdmin]);
+  }, []);
 
   const handleRefFile = useCallback(async (f: File) => {
     try {
@@ -822,10 +812,10 @@ export default function MasteringClient() {
       const buffer = await audioCtx.decodeAudioData(ab);
       await audioCtx.close();
       setRefFile(f);
-      const ana = await analyzeBuffer(buffer, isAdmin);
+      const ana = await analyzeBuffer(buffer, true);
       setRefAnalysis(ana);
     } catch { /* ignore ref errors */ }
-  }, [isAdmin]);
+  }, []);
 
   const doMaster = async () => {
     if (!audioBuffer || !analysis) return;
@@ -907,7 +897,7 @@ td:last-child{font-weight:600}
         const audioCtx = new AudioContext();
         const buf = await audioCtx.decodeAudioData(ab);
         await audioCtx.close();
-        const ana = await analyzeBuffer(buf, isAdmin);
+        const ana = await analyzeBuffer(buf, true);
         const r = await masterAudio(buf, settings, { lufs: ana.lufs, peak: ana.peak, dr: ana.dr }, () => {});
         const wavBytes = encodeWAV(r.buffer);
         zip.file(`${f.name.replace(/\.[^.]+$/, "")}_master.wav`, wavBytes);
@@ -944,7 +934,6 @@ td:last-child{font-weight:600}
               <span className="head-word-serif serif-accent">Mastering</span>{" "}
               <span className="head-word-bold">Tool</span>
             </h1>
-            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: isAdmin ? "#111111" : "var(--color-soft-green)", color: isAdmin ? "#ffffff" : "var(--color-deep-teal)", fontWeight: 700, flexShrink: 0 }}>{isAdmin ? "Admin ✓" : "Demo Free"}</span>
           </div>
           <p style={{ fontSize: 14, color: "var(--color-muted)", lineHeight: 1.65, maxWidth: 540 }}>
             Upload your track. Choose a preset. Master to streaming standards with EQ, stereo widening, and true-peak limiting — in your browser.

@@ -103,8 +103,6 @@ function StemCard({ stem, onDownload }: { stem: StemResult; onDownload: () => vo
 const S = { mono: { fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#a3a3a3" } };
 
 export default function StemSplitterClient() {
-  const [isAdmin] = useState(() => { if (typeof window==="undefined") return false; try { return localStorage.getItem("andyk_lab_admin")==="true"; } catch { return false; } });
-  if (!isAdmin) { if (typeof window!=="undefined") window.location.replace("/admin"); return null; }
 
   const [file, setFile] = useState<File|null>(null);
   const [stems, setStems] = useState<StemResult[]>([]);
@@ -161,7 +159,6 @@ export default function StemSplitterClient() {
               <span className="head-word-serif serif-accent">Stem</span>{" "}
               <span className="head-word-bold">Splitter</span>
             </h1>
-            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: "#111111", color: "#ffffff", fontWeight: 700 }}>Admin ✓</span>
           </div>
           <p style={{ fontSize: 14, color: "var(--color-muted)", lineHeight: 1.65 }}>Split your track into Bass, Mids, and Highs stems using browser-based frequency filtering.</p>
           <div style={{ display: "inline-block", marginTop: 8, padding: "4px 10px", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 6, fontSize: 11, color: "#92400e", fontFamily: "var(--font-mono)" }}>

@@ -62,8 +62,6 @@ function MeterBar({ value, label }: { value: number; label: string }) {
 }
 
 export default function LoudnessMeterClient() {
-  const [isAdmin] = useState(() => { if (typeof window==="undefined") return false; try { return localStorage.getItem("andyk_lab_admin")==="true"; } catch { return false; } });
-  if (!isAdmin) { if (typeof window!=="undefined") window.location.replace("/admin"); return null; }
 
   const [mode, setMode] = useState<"mic"|"file">("file");
   const [momentary, setMomentary] = useState(-70);
@@ -170,7 +168,6 @@ export default function LoudnessMeterClient() {
               <span className="head-word-serif serif-accent">Loudness</span>{" "}
               <span className="head-word-bold">Meter</span>
             </h1>
-            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: "#111111", color: "#ffffff", fontWeight: 700 }}>Admin ✓</span>
           </div>
           <p style={{ fontSize: 14, color: "var(--color-muted)", lineHeight: 1.65 }}>Real-time LUFS metering from microphone or file. Momentary, short-term, and integrated LUFS with platform targets.</p>
         </div>
