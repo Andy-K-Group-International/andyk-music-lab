@@ -9,9 +9,7 @@ const GF_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=IBM+Ple
 const LOGO = `
   <tr>
     <td style="padding:40px 48px 32px;">
-      <span style="font-family:${MONO};font-size:14px;font-weight:700;color:#111111;letter-spacing:0.06em;text-transform:uppercase;">Andy&rsquo;K</span>
-      <span style="font-family:${MONO};font-size:14px;color:#d4d4d4;margin:0 10px;">&middot;</span>
-      <span style="font-family:${MONO};font-size:11px;font-weight:400;color:#8a8a8a;letter-spacing:0.1em;text-transform:uppercase;">Music Lab</span>
+      <img src="https://lab.djandykofficial.com/logo-3d.png" alt="Andy'K Music Lab" width="200" style="display:block;margin:0 auto 24px auto;" />
     </td>
   </tr>
   <tr><td style="height:1px;background:#e5e5e5;font-size:0;line-height:0;">&nbsp;</td></tr>`;
