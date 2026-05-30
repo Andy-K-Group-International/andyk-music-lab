@@ -156,7 +156,7 @@ function AltHead({ children }: { children: string }) {
 
 const steps = [
   { num: "01", icon: <IconUpload />, title: "Upload Your Track", desc: "Drop your MP3 or WAV. Your audio stays entirely in your browser — 100% private, never sent to any server." },
-  { num: "02", icon: <IconProcess />, title: "AI-Powered Processing", desc: "Browser-based DSP engine analyses loudness, applies precision EQ, and masters to industry standards in seconds." },
+  { num: "02", icon: <IconProcess />, title: "Smart Audio Processing", desc: "Browser-based DSP engine analyses loudness, applies precision EQ, and masters to industry standards in seconds." },
   { num: "03", icon: <IconDownload />, title: "Compare & Download", desc: "Hear the A/B difference, review LUFS stats, and download your mastered WAV — all within your browser." },
 ];
 
@@ -435,6 +435,111 @@ export default function HomeClient() {
               </ScrollReveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      <div className="divider-glow" />
+
+      {/* ── WHY THE LAB EXISTS ── */}
+      <section className="section-surface py-28 px-6">
+        <div className="max-w-3xl mx-auto">
+          <ScrollReveal>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(0,0,0,0.38)" }}>
+              Why the Lab Exists
+            </span>
+            <h2 className="section-heading mt-3 mb-10">
+              Built from a real <span className="serif-accent">workflow</span>
+            </h2>
+          </ScrollReveal>
+          <ScrollReveal delay={1}>
+            <div style={{ fontSize: 16, color: "#525252", lineHeight: 1.85, fontFamily: "var(--font-sans)" }}>
+              <p style={{ marginBottom: 20 }}>
+                Andy&apos;K Music Lab was created from the real workflow of DJ Andy&apos;K — from preparing tracks for release to analysing loudness, BPM, key, transitions and final sound.
+              </p>
+              <p style={{ marginBottom: 20 }}>
+                Every producer knows the same problem: too many tools, too many plugins, too many steps. The Lab brings the essential music preparation workflow into one clean browser-based space.
+              </p>
+              <p>
+                It is not built to replace creativity. It is built to protect it.
+              </p>
+            </div>
+            <div style={{ borderLeft: "2px solid #111111", paddingLeft: 28, marginTop: 44 }}>
+              <p style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: "clamp(1.1rem,2vw,1.35rem)", color: "#111111", lineHeight: 1.55, margin: 0 }}>
+                &ldquo;Music is your passion. The Lab is where it becomes ready.&rdquo;
+              </p>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      <div className="divider-glow" />
+
+      {/* ── WHO IT IS FOR ── */}
+      <section className="py-28 px-6" style={{ background: "#f5f5f5" }}>
+        <div className="max-w-6xl mx-auto">
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(0,0,0,0.38)" }}>
+                Who It Is For
+              </span>
+              <h2 className="section-heading mt-3">
+                Made for <span className="serif-accent">creators</span>
+              </h2>
+            </div>
+          </ScrollReveal>
+          <div className="grid md:grid-cols-3 gap-px" style={{ background: "#e5e5e5", border: "1px solid #e5e5e5" }}>
+            {[
+              { title: "For Producers", body: "Prepare tracks for release, check loudness, compare mixes and generate creative ideas." },
+              { title: "For DJs", body: "Detect BPM and key, plan harmonic sets and organise transitions faster." },
+              { title: "For Independent Artists", body: "Finish music without complex plugins or expensive studio workflows." },
+            ].map((card, i) => (
+              <ScrollReveal key={card.title} delay={(i % 3) as 0 | 1 | 2}>
+                <div style={{ padding: "40px 36px", background: "#ffffff", height: "100%" }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111111", marginBottom: 14, letterSpacing: "-0.01em", fontFamily: "var(--font-sans)" }}>
+                    {card.title}
+                  </h3>
+                  <p style={{ fontSize: 14, color: "#525252", lineHeight: 1.8, margin: 0, fontFamily: "var(--font-sans)" }}>
+                    {card.body}
+                  </p>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="divider-glow" />
+
+      {/* ── FOUNDER ── */}
+      <section className="section-surface py-28 px-6">
+        <div className="max-w-3xl mx-auto">
+          <ScrollReveal>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(0,0,0,0.38)" }}>
+              Founder
+            </span>
+            <h2 className="section-heading mt-3 mb-10">
+              Built by <span className="serif-accent">DJ Andy&apos;K</span>
+            </h2>
+          </ScrollReveal>
+          <ScrollReveal delay={1}>
+            <p style={{ fontSize: 16, color: "#525252", lineHeight: 1.85, fontFamily: "var(--font-sans)", marginBottom: 36 }}>
+              DJ Andy&apos;K is a producer focused on trance, progressive house and emotional electronic music. Andy&apos;K Music Lab was built from his own release workflow — turning the same preparation process into simple tools for other producers and DJs.
+            </p>
+            <a
+              href="https://djandykofficial.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex", alignItems: "center",
+                fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700,
+                letterSpacing: "0.12em", textTransform: "uppercase",
+                color: "#111111", textDecoration: "none",
+                borderBottom: "1.5px solid #111111", paddingBottom: 3,
+              }}
+            >
+              Explore DJ Andy&apos;K →
+            </a>
+          </ScrollReveal>
         </div>
       </section>
 
