@@ -803,18 +803,22 @@ export default function HomeClient() {
                 <div className={`pricing-card h-full ${plan.featured ? "featured" : ""}`}>
                   {plan.featured && <span className="pricing-badge">{t.pricing.mostPopular}</span>}
                   <div className="mb-2">
-                    {discountPercent > 0 ? (
-                      <>
-                        <span className="pricing-price" style={{ textDecoration: "line-through", opacity: 0.4, fontSize: "1.1rem" }}>{convert(plan.gbpPrice, currency)}</span>
-                        <span className="pricing-price" style={{ marginLeft: 8 }}>{convert(discountedGbp(plan.gbpPrice), currency)}</span>
-                        <span className="pricing-period">{t.pricing[plan.periodKey]}</span>
-                        <span style={{ marginLeft: 10, padding: "2px 8px", background: "#16a34a", color: "#fff", fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.08em", verticalAlign: "middle" }}>{discountPercent}% OFF</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="pricing-price">{convert(plan.gbpPrice, currency)}</span>
-                        <span className="pricing-period">{t.pricing[plan.periodKey]}</span>
-                      </>
+                    <span
+                      className="pricing-price"
+                      style={discountPercent > 0 ? { textDecoration: "line-through", opacity: 0.4, fontSize: "1.1rem" } : undefined}
+                    >
+                      {convert(plan.gbpPrice, currency)}
+                    </span>
+                    {discountPercent > 0 && (
+                      <span className="pricing-price" style={{ marginLeft: 8 }}>
+                        {convert(discountedGbp(plan.gbpPrice), currency)}
+                      </span>
+                    )}
+                    <span className="pricing-period">{t.pricing[plan.periodKey]}</span>
+                    {discountPercent > 0 && (
+                      <span style={{ marginLeft: 10, padding: "2px 8px", background: "#16a34a", color: "#fff", fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.08em", verticalAlign: "middle" }}>
+                        {discountPercent}% OFF
+                      </span>
                     )}
                   </div>
                   <div className="pricing-name">{plan.name}</div>
