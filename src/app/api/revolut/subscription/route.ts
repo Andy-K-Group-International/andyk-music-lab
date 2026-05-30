@@ -2,52 +2,54 @@ import { NextRequest, NextResponse } from "next/server";
 
 const APP_URL = "https://lab.djandykofficial.com";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const TOTAL_EARLY_SPOTS = 40;
 
 const PLANS = {
-  studio: {
-    earlyAmount: 2900,
-    normalAmount: 4900,
-    description: "Studio Pass — Andy'K Music Lab",
-  },
-  pro: {
-    earlyAmount: 11900,
-    normalAmount: 19900,
-    description: "Pro Pass — Andy'K Music Lab",
-  },
+  studio: { amount: 4900, description: "Studio Pass — Andy'K Music Lab" }, // £49/mo
+  pro:    { amount: 19900, description: "Pro Pass — Andy'K Music Lab" },   // £199/yr
 } as const;
 
 type SubscriptionPlan = keyof typeof PLANS;
 
-async function isEarlyAccess(): Promise<boolean> {
-  try {
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist?select=id&limit=0`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}`, Prefer: "count=exact" },
-      cache: "no-store",
-    });
-    const range = res.headers.get("content-range") ?? "";
-    const count = parseInt(range.split("/")[1] ?? "0", 10);
-    return isNaN(count) || count < TOTAL_EARLY_SPOTS;
-  } catch {
-    return false;
-  }
+function sbHeaders() {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` };
+}
+
+async function applyAndMarkCode(code: string, email?: string): Promise<number> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/discount_codes?code=eq.${encodeURIComponent(code)}&used=eq.false&select=discount_percent&limit=1`,
+    { headers: sbHeaders(), cache: "no-store" }
+  );
+  const rows: { discount_percent: number }[] = res.ok ? await res.json() : [];
+  if (!rows.length) return 0;
+
+  await fetch(
+    `${SUPABASE_URL}/rest/v1/discount_codes?code=eq.${encodeURIComponent(code)}`,
+    {
+      method: "PATCH",
+      headers: { ...sbHeaders(), Prefer: "return=minimal" },
+      body: JSON.stringify({ used: true, used_by_email: email ?? null, used_at: new Date().toISOString() }),
+    }
+  );
+  return rows[0].discount_percent;
 }
 
 export async function POST(req: NextRequest) {
-  const { plan } = await req.json().catch(() => ({}));
+  const { plan, discount_code } = await req.json().catch(() => ({}));
   if (!plan || !(plan in PLANS)) {
     return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
   }
 
   const secret = process.env.REVOLUT_SECRET_KEY;
-  if (!secret) {
-    return NextResponse.json({ error: "Revolut not configured" }, { status: 500 });
-  }
+  if (!secret) return NextResponse.json({ error: "Revolut not configured" }, { status: 500 });
 
   const planConfig = PLANS[plan as SubscriptionPlan];
-  const early = await isEarlyAccess();
-  const amount = early ? planConfig.earlyAmount : planConfig.normalAmount;
+  let amount: number = planConfig.amount;
+
+  if (discount_code) {
+    const pct = await applyAndMarkCode(discount_code.trim().toUpperCase());
+    if (pct > 0) amount = Math.round(amount * (1 - pct / 100));
+  }
 
   const res = await fetch("https://merchant.revolut.com/api/orders", {
     method: "POST",
@@ -73,8 +75,6 @@ export async function POST(req: NextRequest) {
   }
 
   const order = await res.json();
-  const checkout_url =
-    order.checkout_url ?? `https://checkout.revolut.com/pay/${order.public_id}`;
-
+  const checkout_url = order.checkout_url ?? `https://checkout.revolut.com/pay/${order.public_id}`;
   return NextResponse.json({ checkout_url });
 }

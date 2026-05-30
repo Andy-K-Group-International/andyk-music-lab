@@ -179,8 +179,8 @@ const stats = [
 ];
 
 const pricing: { name: string; gbpPrice: number; periodKey: "oneTime" | "perMonth" | "perYear"; desc: string; features: string[]; featured: boolean; plan: WaitlistPlan }[] = [
-  { name: "Single Session", gbpPrice: 49,  periodKey: "oneTime",  plan: "single", featured: false, desc: "One professional mastering session for a single track.", features: ["1 track mastered", "-14 LUFS / -0.3 dBTP", "WAV + MP3 download", "24h turnaround"] },
-  { name: "Studio Pass",    gbpPrice: 29,  periodKey: "perMonth", plan: "studio", featured: false, desc: "For producers releasing regularly.",                     features: ["Unlimited masterings", "BPM + Key detector", "DJ Set Planner", "Priority processing", "Stem separation"] },
+  { name: "Single Session", gbpPrice: 79,  periodKey: "oneTime",  plan: "single", featured: false, desc: "One professional mastering session for a single track.", features: ["1 track mastered", "-14 LUFS / -0.3 dBTP", "WAV + MP3 download", "24h turnaround"] },
+  { name: "Studio Pass",    gbpPrice: 49,  periodKey: "perMonth", plan: "studio", featured: false, desc: "For producers releasing regularly.",                     features: ["Unlimited masterings", "BPM + Key detector", "DJ Set Planner", "Priority processing", "Stem separation"] },
   { name: "Pro Pass",       gbpPrice: 199, periodKey: "perYear",  plan: "pro",    featured: true,  desc: "Everything in Studio Pass — billed annually.", features: ["All Studio Pass features", "SAVE_VS_MONTHLY", "Early access to new tools", "Label export formats", "Dedicated support"] },
 ];
 
@@ -195,6 +195,10 @@ export default function HomeClient() {
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [spots, setSpots] = useState<Spots | null>(null);
   const [loadingPlan, setLoadingPlan] = useState<WaitlistPlan | null>(null);
+  const [discountInput, setDiscountInput] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [discountStatus, setDiscountStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
   const [currency, setCurrency] = useState<Currency>("GBP");
   const [introMuted, setIntroMuted] = useState(true);
   const [introPlaying, setIntroPlaying] = useState(false);
@@ -304,6 +308,32 @@ export default function HomeClient() {
     setWaitlistOpen(true);
   };
 
+  const applyDiscount = async () => {
+    const code = discountInput.trim().toUpperCase();
+    if (!code) return;
+    setDiscountStatus("checking");
+    try {
+      const res = await fetch("/api/discount", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setDiscountCode(code);
+        setDiscountPercent(data.discount_percent);
+        setDiscountStatus("valid");
+      } else {
+        setDiscountStatus("invalid");
+      }
+    } catch {
+      setDiscountStatus("invalid");
+    }
+  };
+
+  const discountedGbp = (gbp: number) =>
+    discountPercent > 0 ? Math.round(gbp * (1 - discountPercent / 100)) : gbp;
+
   const handleCheckout = async (plan: WaitlistPlan) => {
     setLoadingPlan(plan);
     try {
@@ -312,7 +342,7 @@ export default function HomeClient() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, discount_code: discountCode || undefined }),
       });
       const data = await res.json();
       if (data.checkout_url) {
@@ -705,34 +735,61 @@ export default function HomeClient() {
             </div>
           </div>
 
-          {spots && (
-            <div style={{
-              background: "#111111",
-              borderRadius: 0,
-              padding: "14px 24px",
-              margin: "0 0 24px 0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: "8px 16px",
-            }}>
-              {spots.closed ? (
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#ffffff" }}>
-                  {t.pricing.earlyClosed}
-                </span>
-              ) : (
-                <>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#ffffff" }}>
-                    {t.pricing.earlyAccess}
-                  </span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: spots.spots_left <= 5 ? "#f87171" : "rgba(255,255,255,0.6)", whiteSpace: "nowrap" }}>
-                    {spots.spots_left} {t.pricing.spotsRemaining}
-                  </span>
-                </>
-              )}
-            </div>
-          )}
+          {/* Discount code input */}
+          <div style={{ marginBottom: 24, display: "flex", gap: 0, flexWrap: "wrap" }}>
+            <input
+              type="text"
+              value={discountInput}
+              onChange={e => { setDiscountInput(e.target.value.toUpperCase()); if (discountStatus !== "idle") setDiscountStatus("idle"); }}
+              onKeyDown={e => e.key === "Enter" && applyDiscount()}
+              placeholder="Have a discount code?"
+              style={{
+                flex: 1,
+                minWidth: 180,
+                padding: "10px 14px",
+                background: "#ffffff",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRight: "none",
+                borderRadius: 0,
+                color: "#111111",
+                fontFamily: "var(--font-mono)",
+                fontSize: 12,
+                letterSpacing: "0.06em",
+                outline: "none",
+              }}
+            />
+            <button
+              onClick={applyDiscount}
+              disabled={discountStatus === "checking" || discountStatus === "valid"}
+              style={{
+                padding: "10px 20px",
+                background: discountStatus === "valid" ? "#16a34a" : "#ffffff",
+                color: discountStatus === "valid" ? "#ffffff" : "#111111",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 0,
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {discountStatus === "checking" ? "…" : discountStatus === "valid" ? "✓ Applied" : "Apply"}
+            </button>
+            {discountStatus === "invalid" && (
+              <span style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: 10, color: "#f87171", letterSpacing: "0.1em", paddingTop: 6 }}>
+                Invalid or already used code.
+              </span>
+            )}
+            {discountStatus === "valid" && (
+              <span style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: 10, color: "#4ade80", letterSpacing: "0.1em", paddingTop: 6 }}>
+                {discountPercent}% discount applied to all plans.
+              </span>
+            )}
+          </div>
 
           <div className="grid md:grid-cols-3 gap-6 items-stretch">
             {pricing.map((plan, i) => (
@@ -740,12 +797,12 @@ export default function HomeClient() {
                 <div className={`pricing-card h-full ${plan.featured ? "featured" : ""}`}>
                   {plan.featured && <span className="pricing-badge">{t.pricing.mostPopular}</span>}
                   <div className="mb-2">
-                    {plan.plan === "pro" && spots && !spots.closed ? (
+                    {discountPercent > 0 ? (
                       <>
-                        <span className="pricing-price" style={{ textDecoration: "line-through", opacity: 0.45, fontSize: "1.1rem" }}>{convert(plan.gbpPrice, currency)}</span>
-                        <span className="pricing-price" style={{ marginLeft: 8 }}>{convert(119, currency)}</span>
+                        <span className="pricing-price" style={{ textDecoration: "line-through", opacity: 0.4, fontSize: "1.1rem" }}>{convert(plan.gbpPrice, currency)}</span>
+                        <span className="pricing-price" style={{ marginLeft: 8 }}>{convert(discountedGbp(plan.gbpPrice), currency)}</span>
                         <span className="pricing-period">{t.pricing[plan.periodKey]}</span>
-                        <span style={{ marginLeft: 10, padding: "2px 8px", borderRadius: 6, background: "#16a34a", color: "#fff", fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.08em", verticalAlign: "middle" }}>40% OFF</span>
+                        <span style={{ marginLeft: 10, padding: "2px 8px", background: "#16a34a", color: "#fff", fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.08em", verticalAlign: "middle" }}>{discountPercent}% OFF</span>
                       </>
                     ) : (
                       <>
@@ -779,7 +836,7 @@ export default function HomeClient() {
 
           <ScrollReveal>
             <p className="text-center text-xs mt-8" style={{ color: "rgba(255,255,255,0.2)" }}>
-              Payments powered by Revolut. Join the waitlist to lock in early access pricing.
+              Payments powered by Revolut. Have an early access code? Use it at checkout for 40% off.
             </p>
           </ScrollReveal>
         </div>

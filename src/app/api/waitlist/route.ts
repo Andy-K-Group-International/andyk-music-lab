@@ -53,11 +53,18 @@ export async function POST(req: NextRequest) {
 
   const discountCode = await generateDiscountCode();
 
-  const sbRes = await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
-    method: "POST",
-    headers: { ...sbHeaders(true), Prefer: "return=minimal" },
-    body: JSON.stringify({ email: emailClean, name: nameClean, plan: plan || "studio", discount_code: discountCode }),
-  });
+  const [sbRes] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
+      method: "POST",
+      headers: { ...sbHeaders(true), Prefer: "return=minimal" },
+      body: JSON.stringify({ email: emailClean, name: nameClean, plan: plan || "studio", discount_code: discountCode }),
+    }),
+    fetch(`${SUPABASE_URL}/rest/v1/discount_codes`, {
+      method: "POST",
+      headers: { ...sbHeaders(true), Prefer: "return=minimal" },
+      body: JSON.stringify({ code: discountCode, discount_percent: 40 }),
+    }),
+  ]);
 
   if (sbRes.status === 409) {
     return NextResponse.json({ ok: false, duplicate: true, error: "You're already on the list" }, { status: 409 });
