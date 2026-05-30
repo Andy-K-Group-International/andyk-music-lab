@@ -194,6 +194,8 @@ export default function HomeClient() {
   const [spots, setSpots] = useState<Spots | null>(null);
   const [currency, setCurrency] = useState<Currency>("GBP");
   const [introMuted, setIntroMuted] = useState(true);
+  const [introPlaying, setIntroPlaying] = useState(false);
+  const [introProgress, setIntroProgress] = useState(0);
   const [demoPlaying, setDemoPlaying] = useState<"before" | "after" | null>(null);
   const [demoProgress, setDemoProgress] = useState(0);
   const introRef = useRef<HTMLAudioElement | null>(null);
@@ -205,7 +207,12 @@ export default function HomeClient() {
     const audio = new Audio("/audio/after.mp3");
     audio.loop = true;
     audio.muted = true;
-    audio.play().catch(() => {});
+    audio.addEventListener("timeupdate", () => {
+      if (audio.duration > 0) setIntroProgress(audio.currentTime / audio.duration);
+    });
+    audio.play()
+      .then(() => setIntroPlaying(true))
+      .catch(() => setIntroPlaying(false));
     introRef.current = audio;
     return () => { audio.pause(); };
   }, []);
@@ -227,6 +234,17 @@ export default function HomeClient() {
     afterAudioRef.current  = after;
     return () => { before.pause(); after.pause(); };
   }, []);
+
+  const toggleIntroPlay = () => {
+    if (!introRef.current) return;
+    if (introRef.current.paused) {
+      introRef.current.play().catch(() => {});
+      setIntroPlaying(true);
+    } else {
+      introRef.current.pause();
+      setIntroPlaying(false);
+    }
+  };
 
   const toggleIntroMute = () => {
     if (!introRef.current) return;
@@ -444,30 +462,60 @@ export default function HomeClient() {
             </h2>
           </ScrollReveal>
           <ScrollReveal delay={1}>
-            <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 20, flexWrap: "wrap" }}>
-              {(["before", "after"] as const).map(track => (
-                <button
-                  key={track}
-                  onClick={() => playDemo(track)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    padding: "14px 32px", borderRadius: 12,
-                    fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700,
-                    letterSpacing: "0.12em", textTransform: "uppercase",
-                    background: demoPlaying === track ? "#111111" : "transparent",
-                    color: demoPlaying === track ? "#ffffff" : "#111111",
-                    border: "1.5px solid #111111",
-                    cursor: "pointer", transition: "all 0.15s ease",
-                    minWidth: 140,
-                  }}
-                >
-                  <span style={{ fontSize: 14 }}>{demoPlaying === track ? "■" : "▶"}</span>
-                  {track === "before" ? "Before" : "After"}
-                </button>
-              ))}
+            <style>{`
+              @keyframes demoBar {
+                0%   { transform: scaleY(0.2); }
+                100% { transform: scaleY(1); }
+              }
+            `}</style>
+            <div style={{ display: "flex", gap: 24, justifyContent: "center", marginBottom: 20, flexWrap: "wrap" }}>
+              {(["before", "after"] as const).map(track => {
+                const active = demoPlaying === track;
+                const BAR_SCALES = [0.55, 0.9, 0.65, 1, 0.45, 0.8, 0.6, 0.95, 0.7, 0.5, 0.85, 0.75];
+                return (
+                  <div key={track} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                    <button
+                      onClick={() => playDemo(track)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "14px 32px", borderRadius: 0,
+                        fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700,
+                        letterSpacing: "0.12em", textTransform: "uppercase",
+                        background: active ? "#111111" : "transparent",
+                        color: active ? "#ffffff" : "#111111",
+                        border: "1.5px solid #111111",
+                        cursor: "pointer", transition: "background 0.15s ease, color 0.15s ease",
+                        minWidth: 140,
+                      }}
+                    >
+                      <span style={{ fontSize: 13 }}>{active ? "■" : "▶"}</span>
+                      {track === "before" ? "Before" : "After"}
+                    </button>
+                    {/* Waveform bars */}
+                    <div style={{ display: "flex", gap: 3, alignItems: "center", height: 28 }}>
+                      {BAR_SCALES.map((s, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            width: 3,
+                            height: 28,
+                            background: "#111111",
+                            borderRadius: 1,
+                            transform: `scaleY(${active ? s : 0.25})`,
+                            animation: active
+                              ? `demoBar ${0.45 + (i % 4) * 0.12}s ease-in-out ${(i * 0.06).toFixed(2)}s infinite alternate`
+                              : "none",
+                            transition: active ? "none" : "transform 0.4s ease",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div style={{ height: 2, background: "rgba(0,0,0,0.08)", borderRadius: 2, maxWidth: 380, margin: "0 auto 12px", overflow: "hidden" }}>
-              <div style={{ height: "100%", background: "#111111", borderRadius: 2, width: `${demoProgress * 100}%`, transition: "width 0.15s linear" }} />
+            <div style={{ height: 1, background: "rgba(0,0,0,0.1)", maxWidth: 380, margin: "0 auto 10px", overflow: "hidden" }}>
+              <div style={{ height: "100%", background: "#111111", width: `${demoProgress * 100}%`, transition: "width 0.15s linear" }} />
             </div>
             <p style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(0,0,0,0.3)", margin: 0, minHeight: 16 }}>
               {demoPlaying === "before" ? "Playing: Unmastered" : demoPlaying === "after" ? "Playing: Mastered — −14 LUFS" : ""}
@@ -494,29 +542,37 @@ export default function HomeClient() {
           </ScrollReveal>
 
           {/* Currency selector */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
-            {CURRENCIES.map(c => (
-              <button
-                key={c}
-                onClick={() => handleCurrency(c)}
-                style={{
-                  padding: "4px 14px",
-                  borderRadius: 20,
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  background: currency === c ? "#ffffff" : "transparent",
-                  color: currency === c ? "#111111" : "rgba(255,255,255,0.45)",
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                {c}
-              </button>
-            ))}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+            <div style={{
+              display: "inline-flex", gap: 0,
+              background: "#ffffff",
+              border: "1px solid #111111",
+              overflow: "hidden",
+            }}>
+              {CURRENCIES.map(c => (
+                <button
+                  key={c}
+                  onClick={() => handleCurrency(c)}
+                  style={{
+                    padding: "5px 14px",
+                    borderRadius: 0,
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    border: "none",
+                    borderRight: c !== "PYG" ? "1px solid #111111" : "none",
+                    background: currency === c ? "#111111" : "transparent",
+                    color: currency === c ? "#ffffff" : "#111111",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
 
           {spots && (
@@ -598,28 +654,46 @@ export default function HomeClient() {
       {/* ── INTRO AUDIO BAR ── */}
       <div style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 9000,
-        background: "#111111", borderTop: "1px solid rgba(255,255,255,0.08)",
-        padding: "10px 20px",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: "#111111",
         fontFamily: "var(--font-mono)",
       }}>
-        <span style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.45)" }}>
-          ♪ Andy&apos;K Music Lab — Intro
-        </span>
-        <button
-          onClick={toggleIntroMute}
-          style={{
-            background: "none",
-            border: "1px solid rgba(255,255,255,0.2)",
-            borderRadius: 6, padding: "4px 14px",
-            fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
-            letterSpacing: "0.1em", textTransform: "uppercase",
-            color: introMuted ? "rgba(255,255,255,0.5)" : "#ffffff",
-            cursor: "pointer", transition: "all 0.15s ease",
-          }}
-        >
-          {introMuted ? "♪ Unmute" : "✕ Mute"}
-        </button>
+        {/* Progress line */}
+        <div style={{ height: 2, background: "rgba(255,255,255,0.08)", width: "100%" }}>
+          <div style={{ height: "100%", background: "rgba(255,255,255,0.35)", width: `${introProgress * 100}%`, transition: "width 0.2s linear" }} />
+        </div>
+        {/* Controls row */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 20px" }}>
+          <span style={{ fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>
+            ♪ LAB — INTRO
+          </span>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <button
+              onClick={toggleIntroPlay}
+              style={{
+                background: "none", border: "1px solid rgba(255,255,255,0.18)",
+                borderRadius: 0, padding: "3px 11px",
+                fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
+                letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)",
+                cursor: "pointer", transition: "color 0.15s ease",
+              }}
+            >
+              {introPlaying ? "■" : "▶"}
+            </button>
+            <button
+              onClick={toggleIntroMute}
+              style={{
+                background: "none", border: "1px solid rgba(255,255,255,0.18)",
+                borderRadius: 0, padding: "3px 11px",
+                fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
+                letterSpacing: "0.1em", textTransform: "uppercase",
+                color: introMuted ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.85)",
+                cursor: "pointer", transition: "color 0.15s ease",
+              }}
+            >
+              {introMuted ? "Muted" : "Live"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
