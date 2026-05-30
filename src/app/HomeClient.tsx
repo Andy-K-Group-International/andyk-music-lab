@@ -194,6 +194,7 @@ export default function HomeClient() {
   const [waitlistPlan, setWaitlistPlan] = useState<WaitlistPlan>("studio");
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [spots, setSpots] = useState<Spots | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<WaitlistPlan | null>(null);
   const [currency, setCurrency] = useState<Currency>("GBP");
   const [introMuted, setIntroMuted] = useState(true);
   const [introPlaying, setIntroPlaying] = useState(false);
@@ -301,6 +302,28 @@ export default function HomeClient() {
   const openWaitlist = (plan: WaitlistPlan = "studio") => {
     setWaitlistPlan(plan);
     setWaitlistOpen(true);
+  };
+
+  const handleCheckout = async (plan: WaitlistPlan) => {
+    setLoadingPlan(plan);
+    try {
+      const endpoint =
+        plan === "single" ? "/api/revolut/order" : "/api/revolut/subscription";
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        throw new Error("No checkout URL");
+      }
+    } catch {
+      setLoadingPlan(null);
+      alert("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -742,11 +765,12 @@ export default function HomeClient() {
                     ))}
                   </div>
                   <button
-                    onClick={() => openWaitlist(plan.plan)}
+                    onClick={() => handleCheckout(plan.plan)}
                     className={`pricing-cta ${plan.featured ? "pricing-cta-featured" : "pricing-cta-default"}`}
-                    style={{ cursor: "pointer", opacity: 1 }}
+                    style={{ cursor: loadingPlan ? "wait" : "pointer", opacity: loadingPlan === plan.plan ? 0.6 : 1 }}
+                    disabled={loadingPlan !== null}
                   >
-                    {t.pricing.joinWaitlist}
+                    {loadingPlan === plan.plan ? "Processing…" : "Get Access →"}
                   </button>
                 </div>
               </ScrollReveal>
@@ -755,7 +779,7 @@ export default function HomeClient() {
 
           <ScrollReveal>
             <p className="text-center text-xs mt-8" style={{ color: "rgba(255,255,255,0.2)" }}>
-              Payments powered by Stripe — coming soon. Join the waitlist to get early access.
+              Payments powered by Revolut. Join the waitlist to lock in early access pricing.
             </p>
           </ScrollReveal>
         </div>
