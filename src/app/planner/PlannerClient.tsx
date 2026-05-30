@@ -171,6 +171,15 @@ function EnergyCanvas({ tracks }: { tracks: Track[] }) {
 
 // ── Main component ─────────────────────────────────────────────────────────
 export default function PlannerClient() {
+  const [isAdmin] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem("andyk_lab_admin") === "true"; } catch { return false; }
+  });
+
+  if (!isAdmin) {
+    if (typeof window !== "undefined") window.location.replace("/admin");
+    return null;
+  }
 
   const [tracks, setTracks] = useState<Track[]>([emptyTrack(), emptyTrack(), emptyTrack()]);
   const [playlist, setPlaylist] = useState<Track[] | null>(null);
@@ -296,6 +305,7 @@ export default function PlannerClient() {
               <span className="head-word-bold">Set</span>{" "}
               <span className="head-word-serif serif-accent">Planner</span>
             </h1>
+            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: isAdmin ? "#111111" : "var(--color-soft-green)", color: isAdmin ? "#ffffff" : "var(--color-deep-teal)", fontWeight: 700, flexShrink: 0 }}>{isAdmin ? "Admin ✓" : "Free"}</span>
           </div>
           <p style={{ fontSize: 14, color: "var(--color-muted)", lineHeight: 1.65, maxWidth: 520 }}>
             Add your tracks with Camelot keys, drag to reorder, auto-sort harmonically, and export for Rekordbox.

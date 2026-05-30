@@ -86,6 +86,8 @@ function PianoChord({ notes, octaveOffset = 0 }: { notes: string[]; octaveOffset
 const S = { mono: { fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#a3a3a3" } };
 
 export default function ChordGeneratorClient() {
+  const [isAdmin] = useState(() => { if (typeof window==="undefined") return false; try { return localStorage.getItem("andyk_lab_admin")==="true"; } catch { return false; } });
+  if (!isAdmin) { if (typeof window!=="undefined") window.location.replace("/admin"); return null; }
 
   const [keyNote, setKeyNote] = useState("C");
   const [mode, setMode] = useState<"major"|"minor">("minor");
@@ -117,6 +119,7 @@ export default function ChordGeneratorClient() {
               <span className="head-word-serif serif-accent">Chord</span>{" "}
               <span className="head-word-bold">Generator</span>
             </h1>
+            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: "#111111", color: "#ffffff", fontWeight: 700 }}>Admin ✓</span>
           </div>
           <p style={{ fontSize: 14, color: "var(--color-muted)", lineHeight: 1.65, maxWidth: 520 }}>Select a key, mode, and genre feel to generate chord progressions with piano voicings.</p>
         </div>

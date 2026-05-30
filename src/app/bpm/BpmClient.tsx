@@ -320,6 +320,16 @@ function TapBPM() {
 
 // ── Main component ─────────────────────────────────────────────────────────
 export default function BpmClient() {
+  const [isAdmin] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem("andyk_lab_admin") === "true"; } catch { return false; }
+  });
+
+  if (!isAdmin) {
+    if (typeof window !== "undefined") window.location.replace("/admin");
+    return null;
+  }
+
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -379,7 +389,7 @@ export default function BpmClient() {
       const buffer = await audioCtx.decodeAudioData(ab);
       await audioCtx.close();
       const [bpm, chroma, energy, pitch] = await Promise.all([
-        detectBPM(buffer, true),
+        detectBPM(buffer, isAdmin),
         Promise.resolve(buildChroma(buffer)),
         Promise.resolve(computeEnergy(buffer)),
         Promise.resolve(detectPitch(buffer)),
@@ -395,7 +405,7 @@ export default function BpmClient() {
     } catch (err) {
       console.error(err); setError("Analysis failed. Please try a different file.");
     } finally { setAnalyzing(false); }
-  }, []);
+  }, [isAdmin]);
 
   const handleFile = useCallback((f: File) => {
     if (!f.type.match(/audio\/(mpeg|wav|mp3|x-wav|ogg|aac|flac)/) && !f.name.match(/\.(mp3|wav|ogg|flac|aac)$/i)) {
@@ -441,6 +451,7 @@ export default function BpmClient() {
               <span className="head-word-serif serif-accent">Key</span>{" "}
               <span className="head-word-bold">Detector</span>
             </h1>
+            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: isAdmin ? "#111111" : "var(--color-soft-green)", color: isAdmin ? "#ffffff" : "var(--color-deep-teal)", fontWeight: 700, flexShrink: 0 }}>{isAdmin ? "Admin ✓" : "Free"}</span>
           </div>
           <p style={{ fontSize: 14, color: "var(--color-muted)", lineHeight: 1.65, maxWidth: 520 }}>
             Upload an MP3 or WAV. Detect BPM, key, Camelot position, danceability, and pitch — entirely in your browser.

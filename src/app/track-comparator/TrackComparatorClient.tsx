@@ -100,6 +100,8 @@ const ROWS: { label: string; key: keyof Stats; unit?: string; higherBetter?: boo
 const S = { label: { fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#a3a3a3" } };
 
 export default function TrackComparatorClient() {
+  const [isAdmin] = useState(() => { if (typeof window==="undefined") return false; try { return localStorage.getItem("andyk_lab_admin")==="true"; } catch { return false; } });
+  if (!isAdmin) { if (typeof window!=="undefined") window.location.replace("/admin"); return null; }
 
   const [fileA, setFileA] = useState<File|null>(null);
   const [fileB, setFileB] = useState<File|null>(null);
@@ -161,6 +163,7 @@ export default function TrackComparatorClient() {
               <span className="head-word-serif serif-accent">Track</span>{" "}
               <span className="head-word-bold">Comparator</span>
             </h1>
+            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: "#111111", color: "#ffffff", fontWeight: 700 }}>Admin ✓</span>
           </div>
           <p style={{ fontSize: 14, color: "var(--color-muted)", lineHeight: 1.65, maxWidth: 520 }}>Upload two tracks. Compare loudness, dynamics, BPM, key, and Camelot side-by-side — entirely in your browser.</p>
         </div>

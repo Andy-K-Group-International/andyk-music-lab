@@ -10,6 +10,8 @@ const SIG_BEATS: Record<TimeSig, number> = { "2/4": 2, "3/4": 3, "4/4": 4, "6/8"
 const S = { mono: { fontFamily: "var(--font-mono)", letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#a3a3a3", fontSize: 11 } };
 
 export default function MetronomeClient() {
+  const [isAdmin] = useState(() => { if (typeof window==="undefined") return false; try { return localStorage.getItem("andyk_lab_admin")==="true"; } catch { return false; } });
+  if (!isAdmin) { if (typeof window!=="undefined") window.location.replace("/admin"); return null; }
 
   const [bpm, setBpm] = useState(120);
   const [playing, setPlaying] = useState(false);
@@ -110,6 +112,7 @@ export default function MetronomeClient() {
               <span className="head-word-bold">Metro</span>
               <span className="head-word-serif serif-accent">nome</span>
             </h1>
+            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: "#111111", color: "#ffffff", fontWeight: 700 }}>Admin ✓</span>
           </div>
           <p style={{ fontSize: 14, color: "var(--color-muted)", lineHeight: 1.65 }}>Precise Web Audio API metronome with tap tempo, time signatures, and subdivisions.</p>
         </div>
