@@ -72,7 +72,7 @@ export default function DashboardPage() {
   const fetchEntries = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/waitlist");
+      const res = await fetch("/api/admin/waitlist");
       if (res.ok) { const { entries: e } = await res.json(); setEntries(e ?? []); }
     } finally { setLoading(false); }
   }, []);
@@ -87,7 +87,7 @@ export default function DashboardPage() {
   async function notifyOne(id: string) {
     setNotifyingId(id);
     try {
-      const res = await fetch(`/api/waitlist/${id}`, { method: "POST" });
+      const res = await fetch(`/api/admin/waitlist/${id}`, { method: "POST" });
       if (res.ok) setEntries(prev => prev.map(e => e.id === id ? { ...e, notified: true } : e));
     } finally { setNotifyingId(null); }
   }
@@ -96,7 +96,7 @@ export default function DashboardPage() {
     setNotifyingAll(true);
     setNotifyAllResult(null);
     try {
-      const res = await fetch("/api/waitlist/notify-all", { method: "POST" });
+      const res = await fetch("/api/admin/waitlist/notify-all", { method: "POST" });
       if (res.ok) {
         const { count } = await res.json();
         setNotifyAllResult(`Sent to ${count} people`);
