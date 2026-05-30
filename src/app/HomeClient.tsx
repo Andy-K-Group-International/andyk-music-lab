@@ -798,28 +798,24 @@ export default function HomeClient() {
           </div>
 
           {/* Early access banner */}
-          {spots && (
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ background: "#111111", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px 16px" }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#ffffff" }}>
-                  Early Access — First 40 Members Get 40% Off
-                </span>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: spots.closed ? "rgba(255,255,255,0.35)" : spots.spots_left <= 5 ? "#f87171" : "rgba(255,255,255,0.75)", whiteSpace: "nowrap" }}>
-                  {spots.closed ? "Early Access Closed" : `${spots.spots_left} Spots Remaining`}
-                </span>
-              </div>
-              {!spots.closed && spots.spots_left > 0 && (
-                <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#a3a3a3", margin: "8px 0 0" }}>
-                  <button
-                    onClick={() => openWaitlist("studio")}
-                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", fontSize: "inherit", color: "#a3a3a3", textDecoration: "underline" }}
-                  >
-                    Join the waitlist to lock in your discount →
-                  </button>
-                </p>
-              )}
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ background: "#111111", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px 16px" }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#ffffff" }}>
+                Early Access — First 40 Members Get 40% Off
+              </span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: spots?.closed ? "rgba(255,255,255,0.35)" : spots?.spots_left !== undefined && spots.spots_left <= 5 ? "#f87171" : "rgba(255,255,255,0.75)", whiteSpace: "nowrap" }}>
+                {spots ? (spots.closed ? "Early Access Closed" : `${spots.spots_left} Spots Remaining`) : "— Spots Remaining"}
+              </span>
             </div>
-          )}
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#a3a3a3", margin: "8px 0 0" }}>
+              <button
+                onClick={() => openWaitlist("studio")}
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", fontSize: "inherit", color: "#a3a3a3", textDecoration: "underline" }}
+              >
+                Join the waitlist to lock in your discount →
+              </button>
+            </p>
+          </div>
 
           <div className="grid md:grid-cols-3 gap-6 items-stretch">
             {pricing.map((plan, i) => (
