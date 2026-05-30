@@ -128,7 +128,7 @@ export default function RootLayout({
                 <div>
                   <div className="footer-logo mb-3">
                     <AdminUnlock>
-                      <Image src="/logo.png" alt="Andy'K Music Lab" width={120} height={40} />
+                      <Image src="/lab3dwhiteHQ.png" alt="Andy'K Music Lab" width={120} height={120} />
                     </AdminUnlock>
                   </div>
                   <p className="footer-tagline">Professional audio tools — built by DJ Andy&apos;K</p>
