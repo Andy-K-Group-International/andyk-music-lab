@@ -48,8 +48,17 @@ function wrap(inner: string): string {
 
 // ── Template 1: Waitlist confirmation (to user) ───────────────────────────────
 
-export function confirmationHtml(email: string, name: string | null, planLabel: string): string {
+export function confirmationHtml(email: string, name: string | null, planLabel: string, discountCode?: string): string {
   const displayName = name || email.split("@")[0];
+  const discountBlock = discountCode ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e5e5;margin:24px 0 32px;">
+        <tr><td style="padding:20px 24px;">
+          <p style="margin:0 0 8px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">Your Early Access Code</p>
+          <p style="margin:0 0 8px;font-family:${MONO};font-size:20px;font-weight:700;color:#111111;letter-spacing:0.05em;">${discountCode}</p>
+          <p style="margin:0;font-family:${SANS};font-size:13px;color:#525252;line-height:1.6;">Use this code at checkout for <strong>40% off</strong> your first year.</p>
+        </td></tr>
+      </table>` : "";
+
   return wrap(`
   <tr>
     <td style="padding:48px 48px 56px;">
@@ -69,9 +78,11 @@ export function confirmationHtml(email: string, name: string | null, planLabel: 
         You&rsquo;re on the waitlist for <strong style="font-weight:600;">${planLabel}</strong>.
         We&rsquo;ll email you the moment Andy&rsquo;K Music Lab goes live.
       </p>
-      <p style="margin:0 0 44px;font-family:${SANS};font-size:14px;font-weight:300;color:#8a8a8a;line-height:1.75;">
+      <p style="margin:0 0 24px;font-family:${SANS};font-size:14px;font-weight:300;color:#8a8a8a;line-height:1.75;">
         Thank you for your interest.
       </p>
+
+      ${discountBlock}
 
       <a href="https://lab.djandykofficial.com"
          style="display:block;width:100%;box-sizing:border-box;padding:16px 24px;background:#111111;color:#ffffff;font-family:${MONO};font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;text-align:center;">
