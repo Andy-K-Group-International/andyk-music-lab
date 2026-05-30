@@ -487,20 +487,17 @@ export default function HomeClient() {
               </h2>
             </div>
           </ScrollReveal>
-          <div className="grid md:grid-cols-3 gap-px" style={{ background: "#e5e5e5", border: "1px solid #e5e5e5" }}>
+          <div className="grid md:grid-cols-3 gap-6">
             {[
-              { title: "For Producers", body: "Prepare tracks for release, check loudness, compare mixes and generate creative ideas." },
-              { title: "For DJs", body: "Detect BPM and key, plan harmonic sets and organise transitions faster." },
-              { title: "For Independent Artists", body: "Finish music without complex plugins or expensive studio workflows." },
+              { badge: "For Producers",          title: "For Producers",          body: "Prepare tracks for release, check loudness, compare mixes and generate creative ideas." },
+              { badge: "For DJs",                title: "For DJs",                body: "Detect BPM and key, plan harmonic sets and organise transitions faster." },
+              { badge: "For Independent Artists", title: "For Independent Artists", body: "Finish music without complex plugins or expensive studio workflows." },
             ].map((card, i) => (
               <ScrollReveal key={card.title} delay={(i % 3) as 0 | 1 | 2}>
-                <div style={{ padding: "40px 36px", background: "#ffffff", height: "100%" }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111111", marginBottom: 14, letterSpacing: "-0.01em", fontFamily: "var(--font-sans)" }}>
-                    {card.title}
-                  </h3>
-                  <p style={{ fontSize: 14, color: "#525252", lineHeight: 1.8, margin: 0, fontFamily: "var(--font-sans)" }}>
-                    {card.body}
-                  </p>
+                <div className="premium-tool-card">
+                  <span className="premium-tool-badge">{card.badge}</span>
+                  <h3 className="premium-tool-name">{card.title}</h3>
+                  <p className="premium-tool-desc">{card.body}</p>
                 </div>
               </ScrollReveal>
             ))}
