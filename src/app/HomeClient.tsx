@@ -134,8 +134,8 @@ const stats = [
 
 const pricing: { name: string; price: string; period: string; desc: string; features: string[]; featured: boolean; plan: WaitlistPlan }[] = [
   { name: "Single Session", price: "£49",  period: "one-time", plan: "single", featured: false, desc: "One professional mastering session for a single track.", features: ["1 track mastered", "-14 LUFS / -0.3 dBTP", "WAV + MP3 download", "24h turnaround"] },
-  { name: "Studio Pass",    price: "£19",  period: "/month",   plan: "studio", featured: false, desc: "For producers releasing regularly.",                    features: ["Unlimited masterings", "BPM + Key detector", "DJ Set Planner", "Priority processing", "Stem separation (soon)"] },
-  { name: "Pro Pass",       price: "£149", period: "/year",    plan: "pro",    featured: true,  desc: "Everything in Studio Pass — billed annually, save £79.", features: ["All Studio Pass features", "Save £79 vs monthly", "Early access to new tools", "Label export formats", "Dedicated support"] },
+  { name: "Studio Pass",    price: "£29",  period: "/month",   plan: "studio", featured: false, desc: "For producers releasing regularly.",                     features: ["Unlimited masterings", "BPM + Key detector", "DJ Set Planner", "Priority processing", "Stem separation"] },
+  { name: "Pro Pass",       price: "£199", period: "/year",    plan: "pro",    featured: true,  desc: "Everything in Studio Pass — billed annually, save £149.", features: ["All Studio Pass features", "Save £149 vs monthly", "Early access to new tools", "Label export formats", "Dedicated support"] },
 ];
 
 // ── Main component ────────────────────────────────────────────────────────────

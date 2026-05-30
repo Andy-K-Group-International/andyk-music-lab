@@ -7,8 +7,8 @@ export type WaitlistPlan = "single" | "studio" | "pro";
 
 const PLAN_LABELS: Record<WaitlistPlan, string> = {
   single: "Single Session (£49 one-time)",
-  studio: "Studio Pass (£19/month)",
-  pro:    "Pro Pass (£149/year)",
+  studio: "Studio Pass (£29/month)",
+  pro:    "Pro Pass (£199/year)",
 };
 
 interface Props {

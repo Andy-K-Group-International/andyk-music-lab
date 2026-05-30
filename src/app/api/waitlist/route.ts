@@ -6,8 +6,8 @@ const FROM = "noreply@andykgroup.com";
 
 const PLAN_LABELS: Record<string, string> = {
   single: "Single Session — £49 one-time",
-  studio: "Studio Pass — £19/month",
-  pro:    "Pro Pass — £149/year",
+  studio: "Studio Pass — £29/month",
+  pro:    "Pro Pass — £199/year",
 };
 
 function sbHeaders(serviceRole = false) {

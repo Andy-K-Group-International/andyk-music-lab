@@ -381,22 +381,13 @@ export default function BpmClient() {
     return () => cancelAnimationFrame(scanAnim.current);
   }, [analyzing]);
 
-  const handleFile = useCallback((f: File) => {
-    if (!f.type.match(/audio\/(mpeg|wav|mp3|x-wav|ogg|aac|flac)/) && !f.name.match(/\.(mp3|wav|ogg|flac|aac)$/i)) {
-      setError("Please upload an MP3 or WAV file."); return;
-    }
-    setFile(f); setResult(null); setError(null); setSelectedKey("");
-  }, []);
-
-  const analyze = async () => {
-    if (!file) return;
+  const analyzeFile = useCallback(async (f: File) => {
     setAnalyzing(true); setError(null);
     try {
-      const ab = await file.arrayBuffer();
+      const ab = await f.arrayBuffer();
       const audioCtx = new AudioContext();
       const buffer = await audioCtx.decodeAudioData(ab);
       await audioCtx.close();
-
       const [bpm, chroma, energy, pitch] = await Promise.all([
         detectBPM(buffer, isAdmin),
         Promise.resolve(buildChroma(buffer)),
@@ -407,21 +398,22 @@ export default function BpmClient() {
       const keyLabel = `${note} ${mode}`;
       const camelot = CAMELOT[keyLabel] ?? "—";
       const danceability = calcDanceability(bpm, energy);
-
       const r: Result = { bpm, key: note, mode, camelot, energy, danceability, pitch };
-      setResult(r);
-      setSelectedKey(camelot);
-
-      const entry: HistoryEntry = { name: file.name.replace(/\.[^.]+$/, ""), bpm, key: note, mode, camelot, energy, danceability, pitch, timestamp: Date.now() };
-      saveHistory(entry);
-      setHistory(loadHistory());
+      setResult(r); setSelectedKey(camelot);
+      const entry: HistoryEntry = { name: f.name.replace(/\.[^.]+$/, ""), bpm, key: note, mode, camelot, energy, danceability, pitch, timestamp: Date.now() };
+      saveHistory(entry); setHistory(loadHistory());
     } catch (err) {
-      console.error(err);
-      setError("Analysis failed. Please try a different file.");
-    } finally {
-      setAnalyzing(false);
+      console.error(err); setError("Analysis failed. Please try a different file.");
+    } finally { setAnalyzing(false); }
+  }, [isAdmin]);
+
+  const handleFile = useCallback((f: File) => {
+    if (!f.type.match(/audio\/(mpeg|wav|mp3|x-wav|ogg|aac|flac)/) && !f.name.match(/\.(mp3|wav|ogg|flac|aac)$/i)) {
+      setError("Please upload an MP3 or WAV file."); return;
     }
-  };
+    setFile(f); setResult(null); setError(null); setSelectedKey("");
+    analyzeFile(f);
+  }, [analyzeFile]);
 
   const copyExport = () => {
     if (!result || !file) return;
@@ -523,17 +515,21 @@ export default function BpmClient() {
               </div>
             )}
 
-            {/* Analyze button */}
-            {file && !analyzing && (
-              <button onClick={analyze} className="btn-primary" style={{ width: "100%", justifyContent: "center", padding: "14px" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="2,12 5,12 7,5 9,19 11,9 13,15 15,11 17,13 19,12 22,12"/></svg>
-                Analyze Track
-              </button>
-            )}
+            {/* Auto-analysis progress */}
             {analyzing && (
-              <div style={{ width: "100%", padding: "14px", borderRadius: 14, background: "rgba(0,0,0,0.6)", color: "white", fontWeight: 600, textAlign: "center", fontSize: 14 }}>
-                <span style={{ animation: "pulse-ring 1s infinite" }}>Analyzing…</span>
+              <div style={{ width: "100%", padding: "16px", borderRadius: 14, background: "rgba(0,0,0,0.08)", border: "1px solid rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid #111111", borderTopColor: "transparent", animation: "spin 0.8s linear infinite" }} />
+                <span style={{ fontWeight: 600, color: "#111111", fontSize: 14 }}>Analyzing track…</span>
+                <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--color-grid-500)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: "60%", background: "#111111", borderRadius: 2, animation: "progress-pulse 1.2s ease-in-out infinite" }} />
+                </div>
               </div>
+            )}
+            {file && !analyzing && !result && (
+              <button onClick={() => analyzeFile(file)} className="btn-primary" style={{ width: "100%", justifyContent: "center", padding: "14px" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="2,12 5,12 7,5 9,19 11,9 13,15 15,11 17,13 19,12 22,12"/></svg>
+                Re-analyze Track
+              </button>
             )}
 
             {/* Results */}
@@ -684,6 +680,7 @@ export default function BpmClient() {
           </div>
         )}
       </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes progress-pulse{0%,100%{opacity:0.4}50%{opacity:1}}`}</style>
     </div>
   );
 }

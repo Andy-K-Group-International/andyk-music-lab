@@ -6,9 +6,14 @@ import { useRouter } from "next/navigation";
 const ADMIN_KEY = "andyk_lab_admin";
 
 const TOOLS = [
-  { name: "BPM + Key Detector", desc: "Instant BPM via autocorrelation, musical key, Camelot wheel code, and danceability score.", href: "/bpm" },
-  { name: "Mastering Tool",      desc: "Normalize to −14 LUFS, precision EQ, stereo widening, and true-peak limiting.",           href: "/mastering" },
-  { name: "DJ Set Planner",      desc: "Build harmonically perfect sets using the Camelot Wheel with transition analysis.",        href: "/planner" },
+  { name: "BPM + Key Detector",  desc: "Instant BPM via autocorrelation, musical key, Camelot wheel code, and danceability score.", href: "/bpm" },
+  { name: "Mastering Tool",      desc: "Normalize to −14 LUFS, precision EQ, stereo widening, and true-peak limiting.",            href: "/mastering" },
+  { name: "DJ Set Planner",      desc: "Build harmonically perfect sets using the Camelot Wheel with transition analysis.",         href: "/planner" },
+  { name: "Track Comparator",    desc: "Compare two tracks side-by-side: LUFS, peak, DR, BPM, key, and Camelot.",                  href: "/track-comparator" },
+  { name: "Chord Generator",     desc: "Generate chord progressions for Trance, House, Pop, and Cinematic with piano voicings.",   href: "/chord-generator" },
+  { name: "Metronome",           desc: "Web Audio API metronome with tap tempo, time signatures, and subdivisions.",               href: "/metronome" },
+  { name: "Loudness Meter",      desc: "Real-time LUFS from microphone or file. Momentary, short-term, and integrated readings.",  href: "/loudness-meter" },
+  { name: "Stem Splitter",       desc: "Frequency-band stem splitting — Bass, Mids, Highs — each downloadable as WAV.",            href: "/stem-splitter" },
 ];
 
 const PLAN_LABEL: Record<string, string> = {

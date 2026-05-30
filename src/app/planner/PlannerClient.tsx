@@ -253,6 +253,28 @@ export default function PlannerClient() {
     URL.revokeObjectURL(url);
   };
 
+  const xmlInputRef = useRef<HTMLInputElement>(null);
+
+  const importRekordbox = (f: File) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const xml = e.target?.result as string;
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xml, "text/xml");
+      const trackEls = Array.from(doc.querySelectorAll("TRACK"));
+      if (trackEls.length === 0) return;
+      const imported: Track[] = trackEls.slice(0, 50).map(el => ({
+        id: uid(),
+        title: el.getAttribute("Name") || "",
+        bpm: el.getAttribute("BPM") || "",
+        camelot: el.getAttribute("Tonality") || "",
+        duration: "5:00",
+      })).filter(t => t.title);
+      if (imported.length > 0) { setTracks(imported); setPlaylist(null); }
+    };
+    reader.readAsText(f);
+  };
+
   const validCount = tracks.filter(t => t.title.trim() && t.camelot.trim()).length;
   const inBPMRange = (t: Track) => {
     if (!t.bpm) return true;
@@ -315,6 +337,17 @@ export default function PlannerClient() {
               Auto-Sort
             </button>
           </div>
+        </div>
+
+        {/* Rekordbox import */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <input ref={xmlInputRef} type="file" accept=".xml,text/xml" className="hidden"
+            onChange={e => { const f=e.target.files?.[0]; if (f) importRekordbox(f); }} />
+          <button onClick={() => xmlInputRef.current?.click()}
+            style={{ padding: "7px 14px", borderRadius: 9, border: "1px solid var(--color-grid-500)", background: "transparent", color: "var(--color-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import Rekordbox XML
+          </button>
         </div>
 
         {/* Track table */}
