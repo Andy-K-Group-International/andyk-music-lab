@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -12,9 +13,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center flex-shrink-0" onClick={() => setMenuOpen(false)}>
-          <span className="logo-brand">Andy&apos;K</span>
-          <span className="logo-pipe">|</span>
-          <span className="logo-name">Music Lab</span>
+          <Image src="/logo-3d.png" alt="Andy'K Music Lab" width={140} height={47} priority />
         </Link>
 
         {/* Center nav — desktop only */}
