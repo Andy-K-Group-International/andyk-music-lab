@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import WaitlistForm, { type WaitlistPlan } from "@/components/WaitlistForm";
 import { CURRENCIES, type Currency, convert } from "@/lib/currency";
+import { useLanguage } from "@/context/LanguageContext";
 
 // ── SVG Icons ────────────────────────────────────────────────────────────────
 
@@ -177,10 +178,10 @@ const stats = [
   { icon: <IconCheck />, value: "Industry Standards",  desc: "Spotify -14 LUFS · Apple Music -16 LUFS · -0.3 dBTP true-peak limit — streaming platforms ready." },
 ];
 
-const pricing: { name: string; gbpPrice: number; period: string; desc: string; features: string[]; featured: boolean; plan: WaitlistPlan }[] = [
-  { name: "Single Session", gbpPrice: 49,  period: "one-time", plan: "single", featured: false, desc: "One professional mastering session for a single track.", features: ["1 track mastered", "-14 LUFS / -0.3 dBTP", "WAV + MP3 download", "24h turnaround"] },
-  { name: "Studio Pass",    gbpPrice: 29,  period: "/month",   plan: "studio", featured: false, desc: "For producers releasing regularly.",                     features: ["Unlimited masterings", "BPM + Key detector", "DJ Set Planner", "Priority processing", "Stem separation"] },
-  { name: "Pro Pass",       gbpPrice: 199, period: "/year",    plan: "pro",    featured: true,  desc: "Everything in Studio Pass — billed annually.", features: ["All Studio Pass features", "SAVE_VS_MONTHLY", "Early access to new tools", "Label export formats", "Dedicated support"] },
+const pricing: { name: string; gbpPrice: number; periodKey: "oneTime" | "perMonth" | "perYear"; desc: string; features: string[]; featured: boolean; plan: WaitlistPlan }[] = [
+  { name: "Single Session", gbpPrice: 49,  periodKey: "oneTime",  plan: "single", featured: false, desc: "One professional mastering session for a single track.", features: ["1 track mastered", "-14 LUFS / -0.3 dBTP", "WAV + MP3 download", "24h turnaround"] },
+  { name: "Studio Pass",    gbpPrice: 29,  periodKey: "perMonth", plan: "studio", featured: false, desc: "For producers releasing regularly.",                     features: ["Unlimited masterings", "BPM + Key detector", "DJ Set Planner", "Priority processing", "Stem separation"] },
+  { name: "Pro Pass",       gbpPrice: 199, periodKey: "perYear",  plan: "pro",    featured: true,  desc: "Everything in Studio Pass — billed annually.", features: ["All Studio Pass features", "SAVE_VS_MONTHLY", "Early access to new tools", "Label export formats", "Dedicated support"] },
 ];
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -189,6 +190,7 @@ type Spots = { spots_left: number; total: number; closed: boolean };
 
 export default function HomeClient() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [waitlistPlan, setWaitlistPlan] = useState<WaitlistPlan>("studio");
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [spots, setSpots] = useState<Spots | null>(null);
@@ -313,7 +315,7 @@ export default function HomeClient() {
 
         <div className="hero-content">
           <ScrollReveal>
-            <span className="hero-eyebrow">By Andy&apos;K Group International</span>
+            <span className="hero-eyebrow">{t.hero.eyebrow}</span>
           </ScrollReveal>
 
           <ScrollReveal delay={1}>
@@ -333,18 +335,18 @@ export default function HomeClient() {
 
           <ScrollReveal delay={2}>
             <p className="hero-subtitle">
-              Professional audio tools — built by DJ Andy&apos;K
+              {t.hero.subtitle}
             </p>
           </ScrollReveal>
 
           <ScrollReveal delay={3}>
             <div className="hero-ctas">
               <button onClick={() => openWaitlist("studio")} className="btn-primary">
-                Join Waitlist
+                {t.hero.ctaPrimary}
                 <IconArrow />
               </button>
               <a href="#pricing" className="btn-secondary">
-                See Pricing
+                {t.hero.ctaSecondary}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
                   <path d="M12 5v14M5 12l7 7 7-7"/>
                 </svg>
@@ -352,9 +354,9 @@ export default function HomeClient() {
             </div>
 
             <div className="trust-badges">
-              <span className="trust-badge"><span className="trust-check">✓</span>Spotify -14 LUFS Ready</span>
-              <span className="trust-badge"><span className="trust-check">✓</span>Apple Music Compliant</span>
-              <span className="trust-badge"><span className="trust-check">✓</span>100% Browser-Based</span>
+              <span className="trust-badge"><span className="trust-check">✓</span>{t.hero.badge1}</span>
+              <span className="trust-badge"><span className="trust-check">✓</span>{t.hero.badge2}</span>
+              <span className="trust-badge"><span className="trust-check">✓</span>{t.hero.badge3}</span>
             </div>
           </ScrollReveal>
         </div>
@@ -399,37 +401,37 @@ export default function HomeClient() {
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="mb-16">
-              <span className="section-label">Tools</span>
+              <span className="section-label">{t.tools.label}</span>
               <h2 className="section-heading">
-                <AltHead>Everything in one place</AltHead>
+                <AltHead>{t.tools.heading}</AltHead>
               </h2>
               <p className="section-subtext">
-                Professional tools for producers and DJs. Browser-native DSP — no plugins.
+                {t.tools.description}
               </p>
             </div>
           </ScrollReveal>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {tools.map((t, i) => (
-              <ScrollReveal key={t.href} delay={(i % 3) as 0 | 1 | 2 | 3}>
+            {tools.map((tool, i) => (
+              <ScrollReveal key={tool.href} delay={(i % 3) as 0 | 1 | 2 | 3}>
                 <div
                   className="premium-tool-card"
                   style={{ cursor: "pointer" }}
-                  onClick={() => router.push(t.href)}
+                  onClick={() => router.push(tool.href)}
                   role="link"
                   tabIndex={0}
-                  onKeyDown={(e) => e.key === "Enter" && router.push(t.href)}
+                  onKeyDown={(e) => e.key === "Enter" && router.push(tool.href)}
                 >
-                  <div className="premium-tool-icon">{t.icon}</div>
-                  <span className="premium-tool-badge">Account Required</span>
-                  <h3 className="premium-tool-name">{t.title}</h3>
-                  <p className="premium-tool-desc">{t.desc}</p>
+                  <div className="premium-tool-icon">{tool.icon}</div>
+                  <span className="premium-tool-badge">{t.tools.accountRequired}</span>
+                  <h3 className="premium-tool-name">{tool.title}</h3>
+                  <p className="premium-tool-desc">{tool.desc}</p>
                   <button
-                    onClick={(e) => { e.stopPropagation(); openWaitlist(t.plan); }}
+                    onClick={(e) => { e.stopPropagation(); openWaitlist(tool.plan); }}
                     className="try-free-btn"
                     style={{ cursor: "pointer", background: "none", border: "none", padding: 0, font: "inherit" }}
                   >
-                    Join Waitlist <IconArrow />
+                    {t.tools.joinWaitlist} <IconArrow />
                   </button>
                 </div>
               </ScrollReveal>
@@ -445,27 +447,21 @@ export default function HomeClient() {
         <div className="max-w-3xl mx-auto">
           <ScrollReveal>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(0,0,0,0.38)" }}>
-              Why the Lab Exists
+              {t.whyExists.label}
             </span>
             <h2 className="section-heading mt-3 mb-10">
-              Built from a real <span className="serif-accent">workflow</span>
+              {t.whyExists.heading} <span className="serif-accent">{t.whyExists.headingItalic}</span>
             </h2>
           </ScrollReveal>
           <ScrollReveal delay={1}>
             <div style={{ fontSize: 16, color: "#525252", lineHeight: 1.85, fontFamily: "var(--font-sans)" }}>
-              <p style={{ marginBottom: 20 }}>
-                Andy&apos;K Music Lab was created from the real workflow of DJ Andy&apos;K — from preparing tracks for release to analysing loudness, BPM, key, transitions and final sound.
-              </p>
-              <p style={{ marginBottom: 20 }}>
-                Every producer knows the same problem: too many tools, too many plugins, too many steps. The Lab brings the essential music preparation workflow into one clean browser-based space.
-              </p>
-              <p>
-                It is not built to replace creativity. It is built to protect it.
-              </p>
+              <p style={{ marginBottom: 20 }}>{t.whyExists.body1}</p>
+              <p style={{ marginBottom: 20 }}>{t.whyExists.body2}</p>
+              <p>{t.whyExists.body3}</p>
             </div>
             <div style={{ borderLeft: "2px solid #111111", paddingLeft: 28, marginTop: 44 }}>
               <p style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: "clamp(1.1rem,2vw,1.35rem)", color: "#111111", lineHeight: 1.55, margin: 0 }}>
-                &ldquo;Music is your passion. The Lab is where it becomes ready.&rdquo;
+                &ldquo;{t.whyExists.quote}&rdquo;
               </p>
             </div>
           </ScrollReveal>
@@ -480,20 +476,20 @@ export default function HomeClient() {
           <ScrollReveal>
             <div className="text-center mb-16">
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(0,0,0,0.38)" }}>
-                Who It Is For
+                {t.whoFor.label}
               </span>
               <h2 className="section-heading mt-3">
-                Made for <span className="serif-accent">creators</span>
+                {t.whoFor.heading} <span className="serif-accent">{t.whoFor.headingItalic}</span>
               </h2>
             </div>
           </ScrollReveal>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { badge: "For Producers",          title: "For Producers",          body: "Prepare tracks for release, check loudness, compare mixes and generate creative ideas." },
-              { badge: "For DJs",                title: "For DJs",                body: "Detect BPM and key, plan harmonic sets and organise transitions faster." },
-              { badge: "For Independent Artists", title: "For Independent Artists", body: "Finish music without complex plugins or expensive studio workflows." },
+              { badge: t.whoFor.producers, title: t.whoFor.producers, body: t.whoFor.producersDesc },
+              { badge: t.whoFor.djs,       title: t.whoFor.djs,       body: t.whoFor.djsDesc },
+              { badge: t.whoFor.artists,   title: t.whoFor.artists,   body: t.whoFor.artistsDesc },
             ].map((card, i) => (
-              <ScrollReveal key={card.title} delay={(i % 3) as 0 | 1 | 2}>
+              <ScrollReveal key={i} delay={(i % 3) as 0 | 1 | 2}>
                 <div className="premium-tool-card">
                   <span className="premium-tool-badge">{card.badge}</span>
                   <h3 className="premium-tool-name">{card.title}</h3>
@@ -512,15 +508,15 @@ export default function HomeClient() {
         <div className="max-w-3xl mx-auto">
           <ScrollReveal>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(0,0,0,0.38)" }}>
-              Founder
+              {t.founder.label}
             </span>
             <h2 className="section-heading mt-3 mb-10">
-              Built by <span className="serif-accent">DJ Andy&apos;K</span>
+              {t.founder.heading} <span className="serif-accent">{t.founder.headingItalic}</span>
             </h2>
           </ScrollReveal>
           <ScrollReveal delay={1}>
             <p style={{ fontSize: 16, color: "#525252", lineHeight: 1.85, fontFamily: "var(--font-sans)", marginBottom: 36 }}>
-              DJ Andy&apos;K is a producer focused on trance, progressive house and emotional electronic music. Andy&apos;K Music Lab was built from his own release workflow — turning the same preparation process into simple tools for other producers and DJs.
+              {t.founder.body}
             </p>
             <a
               href="https://djandykofficial.com"
@@ -534,7 +530,7 @@ export default function HomeClient() {
                 borderBottom: "1.5px solid #111111", paddingBottom: 3,
               }}
             >
-              Explore DJ Andy&apos;K →
+              {t.founder.cta}
             </a>
           </ScrollReveal>
         </div>
@@ -566,10 +562,10 @@ export default function HomeClient() {
         <div className="max-w-3xl mx-auto text-center">
           <ScrollReveal>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(0,0,0,0.38)" }}>
-              Mastering Demo
+              {t.mastering.label}
             </span>
             <h2 className="section-heading mt-3 mb-10">
-              Hear the <span className="serif-accent">difference</span>
+              {t.mastering.heading} <span className="serif-accent">{t.mastering.headingItalic}</span>
             </h2>
           </ScrollReveal>
           <ScrollReveal delay={1}>
@@ -642,12 +638,12 @@ export default function HomeClient() {
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="text-center mb-16">
-              <span className="section-label">Pricing</span>
+              <span className="section-label">{t.pricing.label}</span>
               <h2 className="section-heading">
-                <AltHead>Simple transparent pricing</AltHead>
+                <AltHead>{t.pricing.heading}</AltHead>
               </h2>
               <p className="section-subtext mx-auto">
-                Join the waitlist for early access. Payments via Stripe — coming soon.
+                {t.pricing.subtitle}
               </p>
             </div>
           </ScrollReveal>
@@ -700,15 +696,15 @@ export default function HomeClient() {
             }}>
               {spots.closed ? (
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#ffffff" }}>
-                  Early Access Closed — Join Waitlist for Next Round
+                  {t.pricing.earlyClosed}
                 </span>
               ) : (
                 <>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#ffffff" }}>
-                    Early Access — First 40 Members Get 40% Off the Yearly Plan
+                    {t.pricing.earlyAccess}
                   </span>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: spots.spots_left <= 5 ? "#f87171" : "rgba(255,255,255,0.6)", whiteSpace: "nowrap" }}>
-                    {spots.spots_left} Spot{spots.spots_left === 1 ? "" : "s"} Remaining
+                    {spots.spots_left} {t.pricing.spotsRemaining}
                   </span>
                 </>
               )}
@@ -719,19 +715,19 @@ export default function HomeClient() {
             {pricing.map((plan, i) => (
               <ScrollReveal key={plan.name} delay={(i % 3) as 0 | 1 | 2 | 3}>
                 <div className={`pricing-card h-full ${plan.featured ? "featured" : ""}`}>
-                  {plan.featured && <span className="pricing-badge">Most Popular</span>}
+                  {plan.featured && <span className="pricing-badge">{t.pricing.mostPopular}</span>}
                   <div className="mb-2">
                     {plan.plan === "pro" && spots && !spots.closed ? (
                       <>
                         <span className="pricing-price" style={{ textDecoration: "line-through", opacity: 0.45, fontSize: "1.1rem" }}>{convert(plan.gbpPrice, currency)}</span>
                         <span className="pricing-price" style={{ marginLeft: 8 }}>{convert(119, currency)}</span>
-                        <span className="pricing-period">{plan.period}</span>
+                        <span className="pricing-period">{t.pricing[plan.periodKey]}</span>
                         <span style={{ marginLeft: 10, padding: "2px 8px", borderRadius: 6, background: "#16a34a", color: "#fff", fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.08em", verticalAlign: "middle" }}>40% OFF</span>
                       </>
                     ) : (
                       <>
                         <span className="pricing-price">{convert(plan.gbpPrice, currency)}</span>
-                        <span className="pricing-period">{plan.period}</span>
+                        <span className="pricing-period">{t.pricing[plan.periodKey]}</span>
                       </>
                     )}
                   </div>
@@ -750,7 +746,7 @@ export default function HomeClient() {
                     className={`pricing-cta ${plan.featured ? "pricing-cta-featured" : "pricing-cta-default"}`}
                     style={{ cursor: "pointer", opacity: 1 }}
                   >
-                    Join Waitlist →
+                    {t.pricing.joinWaitlist}
                   </button>
                 </div>
               </ScrollReveal>

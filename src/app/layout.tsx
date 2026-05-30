@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono, Playfair_Display, DM_Sans } from "next/font/google";
-import Image from "next/image";
 import Navbar from "@/components/Navbar";
-import AdminUnlock from "@/components/AdminUnlock";
-import Link from "next/link";
+import Providers from "@/components/Providers";
+import FooterClient from "@/components/FooterClient";
 import "./globals.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -74,15 +73,6 @@ export const metadata: Metadata = {
   },
 };
 
-const legalLinks = [
-  { href: "/privacy-policy", label: "Privacy Policy" },
-  { href: "/cookies-policy", label: "Cookies" },
-  { href: "/terms-and-conditions", label: "Terms" },
-  { href: "/disclaimer", label: "Disclaimer" },
-  { href: "/company-information", label: "Company Info" },
-  { href: "/copyright", label: "Copyright" },
-];
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -115,67 +105,12 @@ export default function RootLayout({
       <body
         className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${playfair.variable} ${dmSans.variable} antialiased font-sans min-h-screen`}
       >
+        <Providers>
           <Navbar />
           <main className="pt-16">{children}</main>
 
-          {/* Footer */}
-          <footer className="premium-footer">
-            <div className="max-w-6xl mx-auto">
-
-              {/* Top row */}
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 pb-8 mb-6 footer-divider">
-                {/* Logo + tagline */}
-                <div>
-                  <div className="footer-logo mb-3">
-                    <AdminUnlock>
-                      <Image src="/lab3dwhiteHQ.png" alt="Andy'K Music Lab" width={120} height={120} />
-                    </AdminUnlock>
-                  </div>
-                  <p className="footer-tagline">Professional audio tools — built by DJ Andy&apos;K</p>
-                  <div className="flex items-center gap-5 flex-wrap">
-                    <Link href="/#tools" className="footer-link">Tools</Link>
-                    <Link href="/#pricing" className="footer-link">Pricing</Link>
-                    <a href="https://djandykofficial.com" target="_blank" rel="noopener noreferrer" className="footer-link">
-                      djandykofficial.com ↗
-                    </a>
-                  </div>
-                </div>
-
-                {/* Company info */}
-                <div className="text-right">
-                  <div className="text-xs font-mono text-white/20 tracking-widest uppercase mb-2">By</div>
-                  <div className="text-sm font-semibold text-white/50">Andy&apos;K Group International</div>
-                  <div className="text-xs font-mono text-white/20 mt-1">Company No. 16453500</div>
-                </div>
-              </div>
-
-              {/* Legal links */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6">
-                {legalLinks.map(l => (
-                  <Link key={l.href} href={l.href} className="footer-link" style={{ fontSize: 11 }}>
-                    {l.label}
-                  </Link>
-                ))}
-                <Link href="/admin" className="footer-link" style={{ fontSize: 10, opacity: 0.4 }}>
-                  Admin
-                </Link>
-              </div>
-
-              {/* Bottom row */}
-              <div className="footer-bottom" style={{ borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 16 }}>
-                <span className="footer-copy">
-                  © 2026 Andy&apos;K Music Lab · ANDY&apos;K GROUP INTERNATIONAL LTD
-                </span>
-                <div className="flex items-center gap-4">
-                  <a href="https://djandykofficial.com" target="_blank" rel="noopener noreferrer" className="footer-link">
-                    djandykofficial.com
-                  </a>
-                  <span className="font-mono text-white/20 text-xs">v2.1.0</span>
-                </div>
-              </div>
-
-            </div>
-          </footer>
+          <FooterClient />
+        </Providers>
       </body>
     </html>
   );
