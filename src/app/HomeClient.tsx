@@ -688,25 +688,28 @@ export default function HomeClient() {
 
           {spots && (
             <div style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 10,
+              background: "#111111",
+              borderRadius: 0,
               padding: "14px 24px",
-              marginBottom: 32,
-              textAlign: "center",
+              margin: "0 0 24px 0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "8px 16px",
             }}>
               {spots.closed ? (
-                <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.45)", margin: 0 }}>
-                  Early access closed — join waitlist for next round
-                </p>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#ffffff" }}>
+                  Early Access Closed — Join Waitlist for Next Round
+                </span>
               ) : (
                 <>
-                  <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.85)", margin: "0 0 4px 0" }}>
-                    EARLY ACCESS — First 40 members get 40% off the yearly plan
-                  </p>
-                  <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", color: spots.spots_left <= 5 ? "#f87171" : "rgba(255,255,255,0.45)", margin: 0 }}>
-                    {spots.spots_left} spot{spots.spots_left === 1 ? "" : "s"} remaining
-                  </p>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#ffffff" }}>
+                    Early Access — First 40 Members Get 40% Off the Yearly Plan
+                  </span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: spots.spots_left <= 5 ? "#f87171" : "rgba(255,255,255,0.6)", whiteSpace: "nowrap" }}>
+                    {spots.spots_left} Spot{spots.spots_left === 1 ? "" : "s"} Remaining
+                  </span>
                 </>
               )}
             </div>
