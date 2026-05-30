@@ -13,6 +13,10 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret || _req.headers.get("x-admin-secret") !== secret) {
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
   const { id } = await params;
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return NextResponse.json({ ok: false, error: "no api key" }, { status: 500 });

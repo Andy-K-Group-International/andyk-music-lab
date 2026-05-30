@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { launchHtml } from "@/lib/email";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -9,7 +9,11 @@ function sbHeaders() {
   return { "Content-Type": "application/json", "apikey": key, "Authorization": `Bearer ${key}` };
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret || req.headers.get("x-admin-secret") !== secret) {
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return NextResponse.json({ ok: false, error: "no api key" }, { status: 500 });
 

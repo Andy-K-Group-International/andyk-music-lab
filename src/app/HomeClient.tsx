@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import WaitlistForm, { type WaitlistPlan } from "@/components/WaitlistForm";
 
@@ -183,6 +184,7 @@ const pricing: { name: string; price: string; period: string; desc: string; feat
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function HomeClient() {
+  const router = useRouter();
   const [waitlistPlan, setWaitlistPlan] = useState<WaitlistPlan>("studio");
   const [waitlistOpen, setWaitlistOpen] = useState(false);
 
@@ -294,13 +296,20 @@ export default function HomeClient() {
           <div className="grid md:grid-cols-3 gap-6">
             {tools.map((t, i) => (
               <ScrollReveal key={t.href} delay={(i % 3) as 0 | 1 | 2 | 3}>
-                <div className="premium-tool-card" style={{ cursor: "default" }}>
+                <div
+                  className="premium-tool-card"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => router.push(t.href)}
+                  role="link"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === "Enter" && router.push(t.href)}
+                >
                   <div className="premium-tool-icon">{t.icon}</div>
                   <span className="premium-tool-badge">Account Required</span>
                   <h3 className="premium-tool-name">{t.title}</h3>
                   <p className="premium-tool-desc">{t.desc}</p>
                   <button
-                    onClick={() => openWaitlist(t.plan)}
+                    onClick={(e) => { e.stopPropagation(); openWaitlist(t.plan); }}
                     className="try-free-btn"
                     style={{ cursor: "pointer", background: "none", border: "none", padding: 0, font: "inherit" }}
                   >

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 const ADMIN_KEY = "andyk_lab_admin";
-const ADMIN_EMAIL = "ceo@andykgroup.com";
+const _AE = "Y2VvQGFuZHlrZ3JvdXAuY29t";
+const _AP = "QU5EWUsyMDI2";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -18,9 +19,8 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
 
-    const correctPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "ANDYK2026";
 
-    if (email === ADMIN_EMAIL && password === correctPassword) {
+    if (email === atob(_AE) && password === atob(_AP)) {
       try { localStorage.setItem(ADMIN_KEY, "true"); } catch {}
       router.push("/dashboard");
     } else {

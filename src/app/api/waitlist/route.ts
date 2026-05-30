@@ -64,7 +64,11 @@ export async function POST(req: NextRequest) {
 
 // ── GET /api/waitlist — list all (admin) ─────────────────────────────────────
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret || req.headers.get("x-admin-secret") !== secret) {
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/waitlist?select=*&order=created_at.desc`,
     { headers: sbHeaders(true), cache: "no-store" }
