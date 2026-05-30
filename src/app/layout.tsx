@@ -94,8 +94,8 @@ export default function RootLayout({
               "applicationCategory": "MusicApplication",
               "operatingSystem": "Web Browser",
               "offers": [
-                { "@type": "Offer", "name": "Studio Pass",    "price": "19",  "priceCurrency": "GBP" },
-                { "@type": "Offer", "name": "Pro Pass",       "price": "149", "priceCurrency": "GBP" },
+                { "@type": "Offer", "name": "Studio Pass",    "price": "29",  "priceCurrency": "GBP" },
+                { "@type": "Offer", "name": "Pro Pass",       "price": "199", "priceCurrency": "GBP" },
                 { "@type": "Offer", "name": "Single Session", "price": "49",  "priceCurrency": "GBP" },
               ],
               "author": { "@type": "Person", "name": "DJ Andy'K", "url": "https://djandykofficial.com" },
