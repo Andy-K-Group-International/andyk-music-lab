@@ -48,6 +48,43 @@ const IconVinyl = () => (
     <path d="M12 6.5 A5.5 5.5 0 0 1 17.5 12"/>
   </svg>
 );
+const IconScales = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+    <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+    <path d="M7 21h10"/>
+    <path d="M12 3v18"/>
+    <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
+  </svg>
+);
+const IconMusic = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M9 18V5l12-2v13"/>
+    <circle cx="6" cy="18" r="3"/>
+    <circle cx="18" cy="16" r="3"/>
+  </svg>
+);
+const IconMetronome = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polygon points="12 3 22 21 2 21"/>
+    <line x1="12" y1="8" x2="17" y2="17"/>
+    <line x1="8.5" y1="14" x2="15.5" y2="14"/>
+  </svg>
+);
+const IconVolume = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+  </svg>
+);
+const IconLayers = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+    <polyline points="2 17 12 22 22 17"/>
+    <polyline points="2 12 12 17 22 12"/>
+  </svg>
+);
 const IconArrow = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -123,7 +160,12 @@ const steps = [
 const tools: { href: string; icon: React.ReactNode; title: string; desc: string; plan: WaitlistPlan }[] = [
   { href: "/mastering", icon: <IconEqualizer />, title: "Mastering Tool",    plan: "single",  desc: "Normalize to -14 LUFS (Spotify standard), apply EQ, stereo widening, and limit to -0.3 dBTP. Includes A/B waveform compare, presets, and reference track analysis." },
   { href: "/bpm",      icon: <IconPulse />,     title: "BPM + Key Detector", plan: "studio", desc: "Instant BPM via autocorrelation, musical key via Krumhansl-Schmuckler, Camelot wheel, Tap BPM, danceability score, and analysis history." },
-  { href: "/planner",  icon: <IconVinyl />,     title: "DJ Set Planner",     plan: "studio", desc: "Drag & drop tracks, auto-sort by Camelot key, visualise energy flow, see transition quality labels, and export your set." },
+  { href: "/planner",          icon: <IconVinyl />,    title: "DJ Set Planner",     plan: "studio", desc: "Drag & drop tracks, auto-sort by Camelot key, visualise energy flow, see transition quality labels, and export your set." },
+  { href: "/track-comparator", icon: <IconScales />,   title: "Track Comparator",   plan: "studio", desc: "Upload two tracks and compare waveforms, LUFS levels, and frequency content side-by-side. Spot the mix differences instantly." },
+  { href: "/chord-generator",  icon: <IconMusic />,    title: "Chord Generator",    plan: "studio", desc: "Generate chord progressions in any key, explore voicings, and preview how chords sound together — built for producers and songwriters." },
+  { href: "/metronome",        icon: <IconMetronome />,title: "Metronome",          plan: "studio", desc: "Precision browser metronome with adjustable BPM, time signatures, accent patterns, and tap tempo — zero latency via Web Audio API." },
+  { href: "/loudness-meter",   icon: <IconVolume />,   title: "Loudness Meter",     plan: "studio", desc: "Real-time LUFS, RMS, and true-peak metering in your browser. Measure loudness against Spotify, Apple Music, and YouTube targets." },
+  { href: "/stem-splitter",    icon: <IconLayers />,   title: "Stem Splitter",      plan: "pro",    desc: "Separate vocals, drums, bass, and other stems from any track — entirely in the browser. No uploads, no servers, complete privacy." },
 ];
 
 const stats = [
