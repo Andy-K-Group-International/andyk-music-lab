@@ -196,14 +196,17 @@ export default function HomeClient() {
   const [introMuted, setIntroMuted] = useState(true);
   const [introPlaying, setIntroPlaying] = useState(false);
   const [introProgress, setIntroProgress] = useState(0);
+  const [introVisible, setIntroVisible] = useState(false);
   const [demoPlaying, setDemoPlaying] = useState<"before" | "after" | null>(null);
   const [demoProgress, setDemoProgress] = useState(0);
   const introRef = useRef<HTMLAudioElement | null>(null);
   const beforeAudioRef = useRef<HTMLAudioElement | null>(null);
   const afterAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Intro autoplay (muted)
+  // Intro autoplay (muted) — skip if dismissed this session
   useEffect(() => {
+    if (sessionStorage.getItem("intro_dismissed") === "1") return;
+    setIntroVisible(true);
     const audio = new Audio("/audio/after.mp3");
     audio.loop = true;
     audio.muted = true;
@@ -250,6 +253,12 @@ export default function HomeClient() {
     if (!introRef.current) return;
     introRef.current.muted = !introRef.current.muted;
     setIntroMuted(introRef.current.muted);
+  };
+
+  const dismissIntro = () => {
+    introRef.current?.pause();
+    setIntroVisible(false);
+    sessionStorage.setItem("intro_dismissed", "1");
   };
 
   const playDemo = (track: "before" | "after") => {
@@ -651,50 +660,93 @@ export default function HomeClient() {
         </div>
       </section>
 
-      {/* ── INTRO AUDIO BAR ── */}
-      <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 9000,
-        background: "#111111",
-        fontFamily: "var(--font-mono)",
-      }}>
-        {/* Progress line */}
-        <div style={{ height: 2, background: "rgba(255,255,255,0.08)", width: "100%" }}>
-          <div style={{ height: "100%", background: "rgba(255,255,255,0.35)", width: `${introProgress * 100}%`, transition: "width 0.2s linear" }} />
-        </div>
-        {/* Controls row */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 20px" }}>
-          <span style={{ fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>
-            ♪ LAB — INTRO
-          </span>
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button
-              onClick={toggleIntroPlay}
-              style={{
-                background: "none", border: "1px solid rgba(255,255,255,0.18)",
-                borderRadius: 0, padding: "3px 11px",
-                fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
-                letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)",
-                cursor: "pointer", transition: "color 0.15s ease",
-              }}
-            >
-              {introPlaying ? "■" : "▶"}
-            </button>
-            <button
-              onClick={toggleIntroMute}
-              style={{
-                background: "none", border: "1px solid rgba(255,255,255,0.18)",
-                borderRadius: 0, padding: "3px 11px",
-                fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
-                letterSpacing: "0.1em", textTransform: "uppercase",
-                color: introMuted ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.85)",
-                cursor: "pointer", transition: "color 0.15s ease",
-              }}
-            >
-              {introMuted ? "Muted" : "Live"}
-            </button>
+      {/* ── INTRO PLAYER — floating card ── */}
+      {introVisible && (
+        <div style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 9000,
+          width: 320,
+          background: "#ffffff",
+          border: "1px solid #e5e5e5",
+          borderRadius: 16,
+          boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+          padding: "12px 14px",
+          display: "flex", flexDirection: "column", gap: 10,
+        }}>
+          {/* Track row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Album art */}
+            <div style={{ flexShrink: 0, width: 64, height: 64, borderRadius: 10, background: "#111111", overflow: "hidden" }}>
+              <Image src="/logo-transparent.png" alt="Andy'K Music Lab" width={64} height={64} style={{ objectFit: "cover" }} />
+            </div>
+
+            {/* Track info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 700, color: "#111111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Andy&apos;K Music Lab
+              </div>
+              <div style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "#8a8a8a", marginTop: 1 }}>
+                DJ Andy&apos;K
+              </div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#b0b0b0", marginTop: 3, letterSpacing: "0.08em" }}>
+                · INTRO · 2026
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+              {/* Mute/unmute — speaker icon */}
+              <button
+                onClick={toggleIntroMute}
+                title={introMuted ? "Unmute" : "Mute"}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: introMuted ? "#c0c0c0" : "#111111", lineHeight: 1 }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  {introMuted ? (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <line x1="23" y1="9" x2="17" y2="15" />
+                      <line x1="17" y1="9" x2="23" y2="15" />
+                    </>
+                  ) : (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    </>
+                  )}
+                </svg>
+              </button>
+
+              {/* Play/pause — black rounded square */}
+              <button
+                onClick={toggleIntroPlay}
+                style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: "#111111", border: "none",
+                  color: "#ffffff", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 13, flexShrink: 0,
+                }}
+              >
+                {introPlaying ? "■" : "▶"}
+              </button>
+
+              {/* Close */}
+              <button
+                onClick={dismissIntro}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#c0c0c0", fontSize: 16, lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ height: 2, background: "#f0f0f0", borderRadius: 2, overflow: "hidden" }}>
+            <div style={{ height: "100%", background: "#111111", width: `${introProgress * 100}%`, borderRadius: 2, transition: "width 0.2s linear" }} />
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
