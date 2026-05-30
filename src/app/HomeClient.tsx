@@ -735,6 +735,12 @@ export default function HomeClient() {
             </div>
           </div>
 
+          {/* Currency disclaimer */}
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#a3a3a3", textAlign: "right", marginTop: 8, marginBottom: 0 }}>
+            Prices shown in GBP. Other currencies are approximate. Final amount charged in GBP by{" "}
+            <a href="https://www.revolut.com/business/" target="_blank" rel="noopener noreferrer" style={{ color: "#a3a3a3", textDecoration: "underline" }}>Revolut Business</a>.
+          </p>
+
           {/* Discount code input */}
           <div style={{ marginBottom: 24, display: "flex", gap: 0, flexWrap: "wrap" }}>
             <input
