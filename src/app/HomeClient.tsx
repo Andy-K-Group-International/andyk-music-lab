@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import WaitlistForm, { type WaitlistPlan } from "@/components/WaitlistForm";
@@ -193,6 +193,60 @@ export default function HomeClient() {
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [spots, setSpots] = useState<Spots | null>(null);
   const [currency, setCurrency] = useState<Currency>("GBP");
+  const [introMuted, setIntroMuted] = useState(true);
+  const [demoPlaying, setDemoPlaying] = useState<"before" | "after" | null>(null);
+  const [demoProgress, setDemoProgress] = useState(0);
+  const introRef = useRef<HTMLAudioElement | null>(null);
+  const beforeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const afterAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Intro autoplay (muted)
+  useEffect(() => {
+    const audio = new Audio("/audio/after.mp3");
+    audio.loop = true;
+    audio.muted = true;
+    audio.play().catch(() => {});
+    introRef.current = audio;
+    return () => { audio.pause(); };
+  }, []);
+
+  // Demo audio setup
+  useEffect(() => {
+    const before = new Audio("/audio/before.mp3");
+    const after  = new Audio("/audio/after.mp3");
+    const onUpdate = (e: Event) => {
+      const el = e.target as HTMLAudioElement;
+      if (el.duration > 0) setDemoProgress(el.currentTime / el.duration);
+    };
+    const onEnd = () => { setDemoPlaying(null); setDemoProgress(0); };
+    before.addEventListener("timeupdate", onUpdate);
+    after.addEventListener("timeupdate", onUpdate);
+    before.addEventListener("ended", onEnd);
+    after.addEventListener("ended", onEnd);
+    beforeAudioRef.current = before;
+    afterAudioRef.current  = after;
+    return () => { before.pause(); after.pause(); };
+  }, []);
+
+  const toggleIntroMute = () => {
+    if (!introRef.current) return;
+    introRef.current.muted = !introRef.current.muted;
+    setIntroMuted(introRef.current.muted);
+  };
+
+  const playDemo = (track: "before" | "after") => {
+    const ref = track === "before" ? beforeAudioRef : afterAudioRef;
+    const other = track === "before" ? afterAudioRef : beforeAudioRef;
+    other.current?.pause();
+    if (demoPlaying === track) {
+      ref.current?.pause();
+      setDemoPlaying(null);
+    } else {
+      if (ref.current) { ref.current.currentTime = 0; ref.current.play().catch(() => {}); }
+      setDemoProgress(0);
+      setDemoPlaying(track);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -378,6 +432,52 @@ export default function HomeClient() {
 
       <div className="divider-glow" />
 
+      {/* ── MASTERING DEMO ── */}
+      <section className="section-surface py-20 px-6">
+        <div className="max-w-3xl mx-auto text-center">
+          <ScrollReveal>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(0,0,0,0.38)" }}>
+              Mastering Demo
+            </span>
+            <h2 className="section-heading mt-3 mb-10">
+              Hear the <span className="serif-accent">difference</span>
+            </h2>
+          </ScrollReveal>
+          <ScrollReveal delay={1}>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 20, flexWrap: "wrap" }}>
+              {(["before", "after"] as const).map(track => (
+                <button
+                  key={track}
+                  onClick={() => playDemo(track)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "14px 32px", borderRadius: 12,
+                    fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700,
+                    letterSpacing: "0.12em", textTransform: "uppercase",
+                    background: demoPlaying === track ? "#111111" : "transparent",
+                    color: demoPlaying === track ? "#ffffff" : "#111111",
+                    border: "1.5px solid #111111",
+                    cursor: "pointer", transition: "all 0.15s ease",
+                    minWidth: 140,
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>{demoPlaying === track ? "■" : "▶"}</span>
+                  {track === "before" ? "Before" : "After"}
+                </button>
+              ))}
+            </div>
+            <div style={{ height: 2, background: "rgba(0,0,0,0.08)", borderRadius: 2, maxWidth: 380, margin: "0 auto 12px", overflow: "hidden" }}>
+              <div style={{ height: "100%", background: "#111111", borderRadius: 2, width: `${demoProgress * 100}%`, transition: "width 0.15s linear" }} />
+            </div>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(0,0,0,0.3)", margin: 0, minHeight: 16 }}>
+              {demoPlaying === "before" ? "Playing: Unmastered" : demoPlaying === "after" ? "Playing: Mastered — −14 LUFS" : ""}
+            </p>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      <div className="divider-glow" />
+
       {/* ── PRICING ── */}
       <section id="pricing" className="section-dark py-28 px-6">
         <div className="max-w-6xl mx-auto">
@@ -494,6 +594,33 @@ export default function HomeClient() {
           </ScrollReveal>
         </div>
       </section>
+
+      {/* ── INTRO AUDIO BAR ── */}
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 9000,
+        background: "#111111", borderTop: "1px solid rgba(255,255,255,0.08)",
+        padding: "10px 20px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        fontFamily: "var(--font-mono)",
+      }}>
+        <span style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.45)" }}>
+          ♪ Andy&apos;K Music Lab — Intro
+        </span>
+        <button
+          onClick={toggleIntroMute}
+          style={{
+            background: "none",
+            border: "1px solid rgba(255,255,255,0.2)",
+            borderRadius: 6, padding: "4px 14px",
+            fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
+            letterSpacing: "0.1em", textTransform: "uppercase",
+            color: introMuted ? "rgba(255,255,255,0.5)" : "#ffffff",
+            cursor: "pointer", transition: "all 0.15s ease",
+          }}
+        >
+          {introMuted ? "♪ Unmute" : "✕ Mute"}
+        </button>
+      </div>
     </div>
   );
 }
