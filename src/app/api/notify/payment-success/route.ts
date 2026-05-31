@@ -32,7 +32,7 @@ async function sendEmail(to: string, planLabel: string) {
     body: JSON.stringify({
       from: FROM,
       to,
-      subject: "Welcome to Andy'K Music Lab — Payment confirmed",
+      subject: "Welcome to Andy'K Music Lab — Your access is ready",
       html: paymentSuccessHtml(planLabel),
     }),
   });
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const secret = process.env.REVOLUT_SECRET_KEY;
   if (!secret) return NextResponse.json({ error: "Revolut not configured" }, { status: 500 });
 
-  // 1. Verify order with Revolut server-side
+  // 1. Verify order with Revolut server-side — never trust client-supplied plan/email
   const revolut = await fetch(`https://merchant.revolut.com/api/orders/${order_id}`, {
     headers: {
       Authorization: `Bearer ${secret}`,
@@ -64,39 +64,66 @@ export async function POST(req: NextRequest) {
 
   const order = await revolut.json();
 
-  // 2. Verify order is completed
+  // 2. Verify order is actually completed
   if (order.state !== "COMPLETED") {
     return NextResponse.json({ error: "Order not completed", state: order.state }, { status: 402 });
   }
 
-  // 3. Extract email and plan from Revolut order (never trust client-supplied values)
-  const email: string | null = order.email ?? order.customer?.email ?? null;
+  // 3. Extract email and plan from Revolut order — all from trusted source
+  const email: string | null =
+    order.email ?? order.customer?.email ?? order.metadata?.email ?? null;
   const planKey: string = order.metadata?.plan ?? "";
   const planLabel = PLAN_LABELS[planKey] ?? "Music Lab Access";
 
+  // 4. Upsert pending_access (idempotent by order_id) regardless of email availability
+  if (planKey) {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/pending_access?on_conflict=order_id`,
+      {
+        method: "POST",
+        headers: { ...sbHeaders(), Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({
+          email: email?.trim().toLowerCase() ?? "",
+          plan: planKey,
+          order_id,
+          status: "paid",
+          access_granted: false,
+          updated_at: new Date().toISOString(),
+        }),
+      }
+    );
+  }
+
   if (!email) {
-    // Order verified but no email available — return plan name without sending email
     return NextResponse.json({ ok: true, plan_name: planLabel, email_sent: false });
   }
 
-  // 4. Dedup — check if we already sent the payment email for this address
-  const dedupRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/waitlist?email=eq.${encodeURIComponent(email)}&select=id,paid_email_sent&limit=1`,
-    { headers: sbHeaders(), cache: "no-store" }
-  );
-  const dedupRows: { id: string; paid_email_sent: boolean }[] = dedupRes.ok ? await dedupRes.json() : [];
+  const emailLower = email.trim().toLowerCase();
 
-  if (dedupRows.length > 0 && dedupRows[0].paid_email_sent) {
+  // 5. Dedup — check waitlist and pending_access to avoid double-sending
+  const [waitlistRes, pendingRes] = await Promise.all([
+    fetch(
+      `${SUPABASE_URL}/rest/v1/waitlist?email=eq.${encodeURIComponent(emailLower)}&select=id,paid_email_sent&limit=1`,
+      { headers: sbHeaders(), cache: "no-store" }
+    ),
+    fetch(
+      `${SUPABASE_URL}/rest/v1/pending_access?order_id=eq.${encodeURIComponent(order_id)}&select=id,status&limit=1`,
+      { headers: sbHeaders(), cache: "no-store" }
+    ),
+  ]);
+
+  const waitlistRows: { id: string; paid_email_sent: boolean }[] = waitlistRes.ok ? await waitlistRes.json() : [];
+  if (waitlistRows.length > 0 && waitlistRows[0].paid_email_sent) {
     return NextResponse.json({ ok: true, plan_name: planLabel, already_sent: true });
   }
 
-  // 5. Send welcome email
-  await sendEmail(email, planLabel);
+  // 6. Send welcome email
+  await sendEmail(emailLower, planLabel);
 
-  // 6. Mark as sent in waitlist (if they're on it)
-  if (dedupRows.length > 0) {
+  // 7. Mark paid_email_sent in waitlist if present
+  if (waitlistRows.length > 0) {
     await fetch(
-      `${SUPABASE_URL}/rest/v1/waitlist?email=eq.${encodeURIComponent(email)}`,
+      `${SUPABASE_URL}/rest/v1/waitlist?email=eq.${encodeURIComponent(emailLower)}`,
       {
         method: "PATCH",
         headers: { ...sbHeaders(), Prefer: "return=minimal" },

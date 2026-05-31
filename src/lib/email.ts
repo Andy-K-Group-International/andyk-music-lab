@@ -73,15 +73,21 @@ export function paymentSuccessHtml(planLabel: string): string {
         Your <strong style="font-weight:600;">${planLabel}</strong> access is now active. Create your account to access all the tools.
       </p>
 
-      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e5e5;margin:0 0 28px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:2px solid #111111;margin:0 0 28px;">
         <tr><td style="padding:20px 24px;">
-          <p style="margin:0 0 6px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">Create Your Account</p>
-          <p style="margin:0;font-family:${SANS};font-size:14px;color:#111111;line-height:1.65;">
-            Set up your account at:<br/>
-            <a href="https://lab.djandykofficial.com/register" style="color:#111111;font-family:${MONO};font-size:13px;">lab.djandykofficial.com/register</a>
+          <p style="margin:0 0 8px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">Important — Create Your Account</p>
+          <p style="margin:0 0 12px;font-family:${SANS};font-size:14px;color:#111111;line-height:1.65;">
+            Create your account using <strong>the same email address you used at checkout</strong>. This links your payment to your account automatically.
           </p>
+          <a href="https://lab.djandykofficial.com/register" style="display:inline-block;padding:10px 20px;background:#111111;color:#ffffff;font-family:${MONO};font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.12em;text-transform:uppercase;">
+            CREATE ACCOUNT &rarr;
+          </a>
         </td></tr>
       </table>
+
+      <p style="margin:0 0 28px;font-family:${SANS};font-size:13px;color:#737373;line-height:1.65;">
+        Already have an account? <a href="https://lab.djandykofficial.com/login" style="color:#111111;">Sign in here</a> — your access will activate automatically on login.
+      </p>
 
       ${earlyAccessBlock}
 

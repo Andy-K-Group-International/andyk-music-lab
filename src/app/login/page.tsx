@@ -51,7 +51,14 @@ export default function LoginPage() {
       setError("Invalid email or password.");
       setLoading(false);
     } else {
-      router.push("/client");
+      // Check for unlinked pending payment access and activate it
+      let linked = false;
+      try {
+        const linkRes = await fetch("/api/auth/link-access", { method: "POST" });
+        const linkData = await linkRes.json().catch(() => ({}));
+        linked = linkData.linked === true;
+      } catch { /* non-critical */ }
+      router.push(linked ? "/client?payment=success" : "/client");
       router.refresh();
     }
   };
