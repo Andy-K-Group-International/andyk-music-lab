@@ -184,6 +184,17 @@ const pricing: { name: string; gbpPrice: number; periodKey: "oneTime" | "perMont
   { name: "Pro Pass",       gbpPrice: 199, periodKey: "perYear",  plan: "pro",    featured: true,  desc: "Everything in Studio Pass — billed annually.", features: ["All Studio Pass features", "SAVE_VS_MONTHLY", "Early access to new tools", "Label export formats", "Dedicated support"] },
 ];
 
+const individualTools: { id: string; icon: React.ReactNode; name: string; gbpPrice: number; desc: string }[] = [
+  { id: "tool_mastering",  icon: <IconEqualizer />, name: "Mastering Tool",    gbpPrice: 19, desc: "Normalize to -14 LUFS, apply EQ, stereo widening, and limit to -0.3 dBTP." },
+  { id: "tool_bpm",        icon: <IconPulse />,     name: "BPM + Key Detector", gbpPrice: 9,  desc: "Instant BPM, musical key via Camelot wheel, tap BPM, and analysis history." },
+  { id: "tool_planner",    icon: <IconVinyl />,     name: "DJ Set Planner",    gbpPrice: 12, desc: "Drag & drop tracks, auto-sort by Camelot key, visualise energy flow." },
+  { id: "tool_comparator", icon: <IconScales />,    name: "Track Comparator",  gbpPrice: 9,  desc: "Compare waveforms, LUFS levels, and frequency content side-by-side." },
+  { id: "tool_chord",      icon: <IconMusic />,     name: "Chord Generator",   gbpPrice: 9,  desc: "Generate chord progressions in any key and preview voicings." },
+  { id: "tool_metronome",  icon: <IconMetronome />, name: "Metronome",         gbpPrice: 3,  desc: "Precision browser metronome with adjustable BPM and tap tempo." },
+  { id: "tool_loudness",   icon: <IconVolume />,    name: "Loudness Meter",    gbpPrice: 9,  desc: "Real-time LUFS, RMS, and true-peak metering against streaming targets." },
+  { id: "tool_stems",      icon: <IconLayers />,    name: "Stem Splitter",     gbpPrice: 12, desc: "Separate vocals, drums, bass, and stems — entirely in-browser." },
+];
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 type Spots = { spots_left: number; total: number; closed: boolean };
@@ -194,12 +205,14 @@ export default function HomeClient() {
   const [waitlistPlan, setWaitlistPlan] = useState<WaitlistPlan>("studio");
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [spots, setSpots] = useState<Spots | null>(null);
-  const [loadingPlan, setLoadingPlan] = useState<WaitlistPlan | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [discountInput, setDiscountInput] = useState("");
   const [discountCode, setDiscountCode] = useState("");
   const [discountPercent, setDiscountPercent] = useState(0);
   const [discountStatus, setDiscountStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
   const [currency, setCurrency] = useState<Currency>("GBP");
+  const [pricingTab, setPricingTab] = useState<"plans" | "tools">("plans");
+  const [vatBusiness, setVatBusiness] = useState(false);
   const [introMuted, setIntroMuted] = useState(true);
   const [introPlaying, setIntroPlaying] = useState(false);
   const [introProgress, setIntroProgress] = useState(0);
@@ -334,7 +347,9 @@ export default function HomeClient() {
   const discountedGbp = (gbp: number) =>
     discountPercent > 0 ? Math.round(gbp * (1 - discountPercent / 100)) : gbp;
 
-  const handleCheckout = async (plan: WaitlistPlan) => {
+  const withVat = (gbp: number) => vatBusiness ? gbp / 1.2 : gbp;
+
+  const handleCheckout = async (plan: string) => {
     setLoadingPlan(plan);
     try {
       const endpoint =
@@ -701,6 +716,63 @@ export default function HomeClient() {
             </div>
           </ScrollReveal>
 
+          {/* Pricing tab switcher */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+            <div style={{ display: "inline-flex", gap: 0 }}>
+              {(["plans", "tools"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setPricingTab(tab)}
+                  style={{
+                    padding: "6px 20px",
+                    borderRadius: 0,
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    border: "1px solid rgba(255,255,255,0.4)",
+                    borderRight: tab === "plans" ? "none" : "1px solid rgba(255,255,255,0.4)",
+                    background: pricingTab === tab ? "#ffffff" : "transparent",
+                    color: pricingTab === tab ? "#111111" : "rgba(255,255,255,0.65)",
+                    cursor: "pointer",
+                    transition: "background 0.15s ease, color 0.15s ease",
+                  }}
+                >
+                  {tab === "plans" ? "Plans" : "Individual Tools"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* VAT toggle */}
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginBottom: 6 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#a3a3a3", letterSpacing: "0.04em" }}>
+              I&apos;m purchasing as a business (ex. VAT)
+            </span>
+            <button
+              onClick={() => setVatBusiness(v => !v)}
+              style={{
+                width: 36, height: 20, borderRadius: 10,
+                background: vatBusiness ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.2)",
+                border: "none", cursor: "pointer", position: "relative",
+                transition: "background 0.2s ease", flexShrink: 0,
+              }}
+            >
+              <span style={{
+                position: "absolute", top: 2,
+                left: vatBusiness ? 18 : 2,
+                width: 16, height: 16, borderRadius: 8,
+                background: vatBusiness ? "#111111" : "#ffffff",
+                transition: "left 0.2s ease",
+                display: "block",
+              }} />
+            </button>
+          </div>
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#a3a3a3", textAlign: "center", marginBottom: 20 }}>
+            UK VAT 20% may apply. Prices shown ex. VAT for business customers.
+          </p>
+
           {/* Currency selector */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
             <div style={{
@@ -817,52 +889,107 @@ export default function HomeClient() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 items-stretch">
-            {pricing.map((plan, i) => (
-              <ScrollReveal key={plan.name} delay={(i % 3) as 0 | 1 | 2 | 3}>
-                <div className={`pricing-card h-full ${plan.featured ? "featured" : ""}`}>
-                  {plan.featured && <span className="pricing-badge">{t.pricing.mostPopular}</span>}
-                  <div className="mb-2">
-                    <span
-                      className="pricing-price"
-                      style={discountPercent > 0 ? { textDecoration: "line-through", opacity: 0.4, fontSize: "1.1rem" } : undefined}
+          {/* Plans tab */}
+          {pricingTab === "plans" && (
+            <div className="grid md:grid-cols-3 gap-6 items-stretch">
+              {pricing.map((plan, i) => (
+                <ScrollReveal key={plan.name} delay={(i % 3) as 0 | 1 | 2 | 3}>
+                  <div className={`pricing-card h-full ${plan.featured ? "featured" : ""}`}>
+                    {plan.featured && <span className="pricing-badge">{t.pricing.mostPopular}</span>}
+                    <div className="mb-2">
+                      <span
+                        className="pricing-price"
+                        style={discountPercent > 0 ? { textDecoration: "line-through", opacity: 0.4, fontSize: "1.1rem" } : undefined}
+                      >
+                        {convert(withVat(plan.gbpPrice), currency)}
+                      </span>
+                      {discountPercent > 0 && (
+                        <span className="pricing-price" style={{ marginLeft: 8 }}>
+                          {convert(withVat(discountedGbp(plan.gbpPrice)), currency)}
+                        </span>
+                      )}
+                      {vatBusiness && (
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.5)", marginLeft: 6, verticalAlign: "middle" }}>ex. VAT</span>
+                      )}
+                      <span className="pricing-period">{t.pricing[plan.periodKey]}</span>
+                      {discountPercent > 0 && (
+                        <span style={{ marginLeft: 10, padding: "2px 8px", background: "#16a34a", color: "#fff", fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.08em", verticalAlign: "middle" }}>
+                          {discountPercent}% OFF
+                        </span>
+                      )}
+                    </div>
+                    <div className="pricing-name">{plan.name}</div>
+                    <p className="pricing-desc">{plan.desc}</p>
+                    <div className="pricing-features">
+                      {plan.features.map((f) => (
+                        <div key={f} className="pricing-feature">
+                          <span className="pricing-check">✓</span>
+                          <span>{f === "SAVE_VS_MONTHLY" ? `Save ${convert(149, currency)} vs monthly` : f}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => handleCheckout(plan.plan)}
+                      className={`pricing-cta ${plan.featured ? "pricing-cta-featured" : "pricing-cta-default"}`}
+                      style={{ cursor: loadingPlan ? "wait" : "pointer", opacity: loadingPlan === plan.plan ? 0.6 : 1 }}
+                      disabled={loadingPlan !== null}
                     >
-                      {convert(plan.gbpPrice, currency)}
-                    </span>
-                    {discountPercent > 0 && (
-                      <span className="pricing-price" style={{ marginLeft: 8 }}>
-                        {convert(discountedGbp(plan.gbpPrice), currency)}
-                      </span>
-                    )}
-                    <span className="pricing-period">{t.pricing[plan.periodKey]}</span>
-                    {discountPercent > 0 && (
-                      <span style={{ marginLeft: 10, padding: "2px 8px", background: "#16a34a", color: "#fff", fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.08em", verticalAlign: "middle" }}>
-                        {discountPercent}% OFF
-                      </span>
-                    )}
+                      {loadingPlan === plan.plan ? "Processing…" : "Get Access →"}
+                    </button>
                   </div>
-                  <div className="pricing-name">{plan.name}</div>
-                  <p className="pricing-desc">{plan.desc}</p>
-                  <div className="pricing-features">
-                    {plan.features.map((f) => (
-                      <div key={f} className="pricing-feature">
-                        <span className="pricing-check">✓</span>
-                        <span>{f === "SAVE_VS_MONTHLY" ? `Save ${convert(149, currency)} vs monthly` : f}</span>
+                </ScrollReveal>
+              ))}
+            </div>
+          )}
+
+          {/* Individual tools tab */}
+          {pricingTab === "tools" && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {individualTools.map((tool, i) => (
+                  <ScrollReveal key={tool.id} delay={(i % 4) as 0 | 1 | 2 | 3}>
+                    <div className="pricing-card h-full" style={{ display: "flex", flexDirection: "column" }}>
+                      <div style={{ marginBottom: 6 }}>
+                        <span
+                          className="pricing-price"
+                          style={discountPercent > 0 ? { textDecoration: "line-through", opacity: 0.4, fontSize: "1.1rem" } : undefined}
+                        >
+                          {convert(withVat(tool.gbpPrice), currency)}
+                        </span>
+                        {discountPercent > 0 && (
+                          <span className="pricing-price" style={{ marginLeft: 8 }}>
+                            {convert(withVat(discountedGbp(tool.gbpPrice)), currency)}
+                          </span>
+                        )}
+                        {vatBusiness && (
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.5)", marginLeft: 6, verticalAlign: "middle" }}>ex. VAT</span>
+                        )}
+                        <span className="pricing-period">/mo</span>
+                        {discountPercent > 0 && (
+                          <span style={{ marginLeft: 8, padding: "2px 8px", background: "#16a34a", color: "#fff", fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.08em", verticalAlign: "middle" }}>
+                            {discountPercent}% OFF
+                          </span>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => handleCheckout(plan.plan)}
-                    className={`pricing-cta ${plan.featured ? "pricing-cta-featured" : "pricing-cta-default"}`}
-                    style={{ cursor: loadingPlan ? "wait" : "pointer", opacity: loadingPlan === plan.plan ? 0.6 : 1 }}
-                    disabled={loadingPlan !== null}
-                  >
-                    {loadingPlan === plan.plan ? "Processing…" : "Get Access →"}
-                  </button>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
+                      <div className="pricing-name" style={{ fontFamily: "var(--font-sans)", fontWeight: 700 }}>{tool.name}</div>
+                      <p className="pricing-desc" style={{ flex: 1 }}>{tool.desc}</p>
+                      <button
+                        onClick={() => handleCheckout(tool.id)}
+                        className="pricing-cta pricing-cta-default"
+                        style={{ cursor: loadingPlan ? "wait" : "pointer", opacity: loadingPlan === tool.id ? 0.6 : 1, marginTop: "auto" }}
+                        disabled={loadingPlan !== null}
+                      >
+                        {loadingPlan === tool.id ? "Processing…" : "Get Access →"}
+                      </button>
+                    </div>
+                  </ScrollReveal>
+                ))}
+              </div>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#737373", textAlign: "center", marginTop: 24 }}>
+                Studio Pass includes all 8 tools for {convert(withVat(49), currency)}/mo — save vs buying individually
+              </p>
+            </>
+          )}
 
           <ScrollReveal>
             <p className="text-center text-xs mt-8" style={{ color: "rgba(255,255,255,0.2)" }}>

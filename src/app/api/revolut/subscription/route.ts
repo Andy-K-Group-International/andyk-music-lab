@@ -4,8 +4,16 @@ const APP_URL = "https://lab.djandykofficial.com";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
 const PLANS = {
-  studio: { amount: 4900, description: "Studio Pass — Andy'K Music Lab" }, // £49/mo
-  pro:    { amount: 19900, description: "Pro Pass — Andy'K Music Lab" },   // £199/yr
+  studio:          { amount: 4900,  description: "Studio Pass — Andy'K Music Lab" },       // £49/mo
+  pro:             { amount: 19900, description: "Pro Pass — Andy'K Music Lab" },           // £199/yr
+  tool_mastering:  { amount: 1900,  description: "Mastering Tool — Andy'K Music Lab" },    // £19/mo
+  tool_bpm:        { amount: 900,   description: "BPM + Key Detector — Andy'K Music Lab" }, // £9/mo
+  tool_planner:    { amount: 1200,  description: "DJ Set Planner — Andy'K Music Lab" },    // £12/mo
+  tool_comparator: { amount: 900,   description: "Track Comparator — Andy'K Music Lab" },  // £9/mo
+  tool_chord:      { amount: 900,   description: "Chord Generator — Andy'K Music Lab" },   // £9/mo
+  tool_metronome:  { amount: 300,   description: "Metronome — Andy'K Music Lab" },         // £3/mo
+  tool_loudness:   { amount: 900,   description: "Loudness Meter — Andy'K Music Lab" },    // £9/mo
+  tool_stems:      { amount: 1200,  description: "Stem Splitter — Andy'K Music Lab" },     // £12/mo
 } as const;
 
 type SubscriptionPlan = keyof typeof PLANS;
