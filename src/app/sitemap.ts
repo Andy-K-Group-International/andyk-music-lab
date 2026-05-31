@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/metronome`,               lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/loudness-meter`,          lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/stem-splitter`,           lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE}/education-access`,         lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/privacy-policy`,          lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
     { url: `${BASE}/cookies-policy`,          lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
     { url: `${BASE}/terms-and-conditions`,    lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },

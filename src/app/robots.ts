@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/admin", "/dashboard"],
+      disallow: ["/api/", "/admin", "/dashboard", "/client", "/success", "/payment-failed"],
     },
     sitemap: "https://lab.djandykofficial.com/sitemap.xml",
   };
