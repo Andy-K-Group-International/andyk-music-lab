@@ -3,6 +3,7 @@ import { IBM_Plex_Sans, IBM_Plex_Mono, Playfair_Display, DM_Sans } from "next/fo
 import Navbar from "@/components/Navbar";
 import Providers from "@/components/Providers";
 import FooterClient from "@/components/FooterClient";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -111,6 +112,7 @@ export default function RootLayout({
 
           <FooterClient />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
