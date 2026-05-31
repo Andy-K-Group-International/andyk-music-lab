@@ -81,6 +81,34 @@ function codeStatus(c: DiscountCode): { label: string; color: string } {
   return { label: "Active", color: "#16a34a" };
 }
 
+type Customer = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  plan: string;
+  subscription_status: string | null;
+  plan_status: string;
+  plan_started_at: string | null;
+  plan_expires_at: string | null;
+};
+
+const CUST_PLAN_LABEL: Record<string, string> = {
+  single: "Single Session", studio: "Studio Pass", pro: "Pro Pass",
+  tool_mastering: "Mastering", tool_bpm: "BPM + Key", tool_planner: "DJ Planner",
+  tool_comparator: "Comparator", tool_chord: "Chord Gen", tool_metronome: "Metronome",
+  tool_loudness: "Loudness", tool_stems: "Stem Splitter",
+};
+const CUST_PLAN_PRICE: Record<string, number> = {
+  studio: 49, pro: 17, single: 79,
+  tool_mastering: 19, tool_bpm: 9, tool_planner: 12,
+  tool_comparator: 9, tool_chord: 9, tool_metronome: 3, tool_loudness: 9, tool_stems: 12,
+};
+const CUST_STATUS_COLOR: Record<string, string> = {
+  active: "#16a34a", expired: "#ef4444", cancelled: "#8a8a8a",
+};
+
+type CustFilter = "all" | "active" | "expired" | "cancelled";
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const S = {
@@ -109,6 +137,11 @@ export default function DashboardPage() {
   const [notifyingId, setNotifyingId] = useState<string | null>(null);
   const [notifyingAll, setNotifyingAll] = useState(false);
   const [notifyAllResult, setNotifyAllResult] = useState<string | null>(null);
+
+  // Customers state
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [custLoading, setCustLoading] = useState(false);
+  const [custFilter, setCustFilter] = useState<CustFilter>("all");
 
   // Education requests state
   const [edRequests, setEdRequests] = useState<EdRequest[]>([]);
@@ -139,6 +172,14 @@ export default function DashboardPage() {
     } finally { setLoading(false); }
   }, []);
 
+  const fetchCustomers = useCallback(async () => {
+    setCustLoading(true);
+    try {
+      const res = await fetch("/api/admin/customers");
+      if (res.ok) { const { customers: c } = await res.json(); setCustomers(c ?? []); }
+    } finally { setCustLoading(false); }
+  }, []);
+
   const fetchEdRequests = useCallback(async () => {
     setEdLoading(true);
     try {
@@ -155,7 +196,7 @@ export default function DashboardPage() {
     } finally { setCodesLoading(false); }
   }, []);
 
-  useEffect(() => { if (ready) { fetchEntries(); fetchCodes(); fetchEdRequests(); } }, [ready, fetchEntries, fetchCodes, fetchEdRequests]);
+  useEffect(() => { if (ready) { fetchEntries(); fetchCodes(); fetchCustomers(); fetchEdRequests(); } }, [ready, fetchEntries, fetchCodes, fetchCustomers, fetchEdRequests]);
 
   async function logout() {
     try {
@@ -521,6 +562,103 @@ export default function DashboardPage() {
           )}
         </div>
 
+
+        {/* Customers */}
+        <div style={{ borderTop: "1px solid #e5e5e5", paddingTop: 40, marginTop: 48 }}>
+          {/* Header + stats */}
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 16, marginBottom: 24 }}>
+            <div>
+              <p style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#8a8a8a", margin: "0 0 4px" }}>
+                Customers
+              </p>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111111", margin: 0 }}>
+                {custLoading ? "Loading…" : `${customers.length} customer${customers.length !== 1 ? "s" : ""}`}
+              </h2>
+            </div>
+            {!custLoading && customers.length > 0 && (() => {
+              const active    = customers.filter(c => (c.plan_status || c.subscription_status) === "active");
+              const expired   = customers.filter(c => (c.plan_status || c.subscription_status) === "expired");
+              const cancelled = customers.filter(c => (c.plan_status || c.subscription_status) === "cancelled");
+              const mrr       = active.reduce((sum, c) => sum + (CUST_PLAN_PRICE[c.plan] ?? 0), 0);
+              return (
+                <div style={{ display: "flex", gap: 20, flexWrap: "wrap" as const }}>
+                  {[
+                    ["Active",    active.length,    "#16a34a"],
+                    ["Expired",   expired.length,   "#ef4444"],
+                    ["Cancelled", cancelled.length, "#8a8a8a"],
+                    [`~£${mrr}/mo`, null,           "#111111"],
+                  ].map(([label, val, color]) => (
+                    <div key={label as string} style={{ textAlign: "center" as const }}>
+                      {val !== null && <div style={{ fontSize: 20, fontWeight: 700, color: color as string, fontFamily: "var(--font-mono, monospace)" }}>{val}</div>}
+                      <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: val !== null ? "#8a8a8a" : (color as string) }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+            <button onClick={fetchCustomers} style={S.btn("ghost")}>↻</button>
+          </div>
+
+          {/* Filter tabs */}
+          <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
+            {(["all", "active", "expired", "cancelled"] as CustFilter[]).map(f => (
+              <button
+                key={f}
+                onClick={() => setCustFilter(f)}
+                style={{
+                  padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500,
+                  border: "1px solid " + (custFilter === f ? "#111111" : "#e5e5e5"),
+                  background: custFilter === f ? "#111111" : "transparent",
+                  color: custFilter === f ? "#ffffff" : "#525252",
+                  cursor: "pointer", fontFamily: "inherit",
+                  textTransform: "capitalize" as const,
+                }}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          {custLoading ? (
+            <p style={{ fontSize: 13, color: "#8a8a8a" }}>Loading…</p>
+          ) : (() => {
+            const filtered = custFilter === "all"
+              ? customers
+              : customers.filter(c => (c.plan_status || c.subscription_status) === custFilter);
+            return filtered.length === 0 ? (
+              <p style={{ fontSize: 13, color: "#8a8a8a" }}>No customers.</p>
+            ) : (
+              <div style={{ border: "1px solid #e5e5e5", overflow: "hidden" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1.8fr 110px 80px 130px 130px 60px", gap: 0, background: "#f5f5f5", borderBottom: "1px solid #e5e5e5", padding: "7px 14px" }}>
+                  {["Email", "Plan", "Status", "Started", "Expires", "Tools"].map(h => (
+                    <span key={h} style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#8a8a8a" }}>{h}</span>
+                  ))}
+                </div>
+                {filtered.map((c, i) => {
+                  const status = c.plan_status || c.subscription_status || "active";
+                  const toolCount = c.plan === "studio" || c.plan === "pro" ? 8 : 1;
+                  return (
+                    <div
+                      key={c.id}
+                      style={{ display: "grid", gridTemplateColumns: "1.8fr 110px 80px 130px 130px 60px", gap: 0, padding: "9px 14px", borderBottom: i < filtered.length - 1 ? "1px solid #f0f0f0" : "none", alignItems: "center" }}
+                    >
+                      <span style={{ fontSize: 12, color: "#525252", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{c.email}</span>
+                      <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#111111" }}>{CUST_PLAN_LABEL[c.plan] ?? c.plan}</span>
+                      <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: CUST_STATUS_COLOR[status] ?? "#8a8a8a", textTransform: "capitalize" as const }}>{status}</span>
+                      <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#8a8a8a" }}>
+                        {c.plan_started_at ? new Date(c.plan_started_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : "—"}
+                      </span>
+                      <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#8a8a8a" }}>
+                        {c.plan_expires_at ? new Date(c.plan_expires_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : "—"}
+                      </span>
+                      <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#525252" }}>{toolCount}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
 
         {/* Education Access Requests */}
         <div style={{ borderTop: "1px solid #e5e5e5", paddingTop: 40, marginTop: 48 }}>

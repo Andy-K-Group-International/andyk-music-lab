@@ -46,6 +46,60 @@ function wrap(inner: string): string {
 </html>`;
 }
 
+// ── Subscription lifecycle emails ────────────────────────────────────────────
+
+export function expiryWarningHtml(planLabel: string, expiresAt: string): string {
+  const dateStr = new Date(expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  return wrap(`
+  <tr>
+    <td style="padding:48px 48px 56px;">
+      <p style="margin:0 0 20px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">ACCESS EXPIRING SOON</p>
+      <h1 style="margin:0 0 28px;font-family:${SANS};font-size:26px;font-weight:700;color:#111111;letter-spacing:-0.02em;line-height:1.25;">Your access expires in 7 days</h1>
+      <p style="margin:0 0 28px;font-family:${SANS};font-size:15px;color:#111111;line-height:1.75;">
+        Your <strong>${planLabel}</strong> access to Andy&rsquo;K Music Lab will expire on <strong>${dateStr}</strong>. Renew to keep access to all your tools.
+      </p>
+      <a href="https://lab.djandykofficial.com/#pricing"
+         style="display:block;width:100%;box-sizing:border-box;padding:16px 24px;background:#111111;color:#ffffff;font-family:${MONO};font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;text-align:center;">
+        RENEW ACCESS &rarr;
+      </a>
+    </td>
+  </tr>`);
+}
+
+export function expiryHtml(planLabel: string): string {
+  return wrap(`
+  <tr>
+    <td style="padding:48px 48px 56px;">
+      <p style="margin:0 0 20px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">ACCESS EXPIRED</p>
+      <h1 style="margin:0 0 28px;font-family:${SANS};font-size:26px;font-weight:700;color:#111111;letter-spacing:-0.02em;line-height:1.25;">Your access has expired</h1>
+      <p style="margin:0 0 28px;font-family:${SANS};font-size:15px;color:#111111;line-height:1.75;">
+        Your <strong>${planLabel}</strong> access has ended. Renew to continue using Andy&rsquo;K Music Lab.
+      </p>
+      <a href="https://lab.djandykofficial.com/#pricing"
+         style="display:block;width:100%;box-sizing:border-box;padding:16px 24px;background:#111111;color:#ffffff;font-family:${MONO};font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;text-align:center;">
+        RENEW NOW &rarr;
+      </a>
+    </td>
+  </tr>`);
+}
+
+export function paymentFailedHtml(): string {
+  return wrap(`
+  <tr>
+    <td style="padding:48px 48px 56px;">
+      <p style="margin:0 0 20px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">PAYMENT FAILED</p>
+      <h1 style="margin:0 0 28px;font-family:${SANS};font-size:26px;font-weight:700;color:#111111;letter-spacing:-0.02em;line-height:1.25;">Your payment could not be processed</h1>
+      <p style="margin:0 0 28px;font-family:${SANS};font-size:15px;color:#111111;line-height:1.75;">
+        We were unable to process your subscription payment. Please update your payment method to keep access.
+      </p>
+      <a href="https://lab.djandykofficial.com/client"
+         style="display:block;width:100%;box-sizing:border-box;padding:16px 24px;background:#111111;color:#ffffff;font-family:${MONO};font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;text-align:center;">
+        UPDATE PAYMENT &rarr;
+      </a>
+    </td>
+  </tr>`);
+}
+
 // ── Template 0: Payment success (triggered server-side after Revolut verify) ──
 
 export function paymentSuccessHtml(planLabel: string): string {

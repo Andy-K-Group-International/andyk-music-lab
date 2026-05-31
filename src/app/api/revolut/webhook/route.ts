@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
+import { paymentFailedHtml } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const FROM         = "noreply@andykgroup.com";
 
 function sbHeaders() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -22,54 +24,85 @@ function verifySignature(rawBody: string, sigHeader: string, secret: string): bo
   } catch { return false; }
 }
 
+async function sendEmail(to: string, subject: string, html: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ from: FROM, to, subject, html }),
+  }).catch(err => console.error("[webhook] email error", err));
+}
+
 const PLAN_TOOLS: Record<string, string[]> = {
-  single:  ["mastering"],
-  studio:  ["mastering","bpm","planner","track-comparator","chord-generator","metronome","loudness-meter","stem-splitter"],
-  pro:     ["mastering","bpm","planner","track-comparator","chord-generator","metronome","loudness-meter","stem-splitter"],
+  single:          ["mastering"],
+  studio:          ["mastering","bpm","planner","track-comparator","chord-generator","metronome","loudness-meter","stem-splitter"],
+  pro:             ["mastering","bpm","planner","track-comparator","chord-generator","metronome","loudness-meter","stem-splitter"],
+  tool_mastering:  ["mastering"],
+  tool_bpm:        ["bpm"],
+  tool_planner:    ["planner"],
+  tool_comparator: ["track-comparator"],
+  tool_chord:      ["chord-generator"],
+  tool_metronome:  ["metronome"],
+  tool_loudness:   ["loudness-meter"],
+  tool_stems:      ["stem-splitter"],
 };
 
-async function handleOrderCompleted(order: Record<string, unknown>, orderId: string) {
-  const email = (
-    (order.email as string | undefined) ??
-    ((order.customer as Record<string,unknown>|undefined)?.email as string|undefined) ??
-    (order.customer_email as string | undefined) ?? ""
+function planExpiry(plan: string, fromDate = Date.now()): string | null {
+  if (plan === "pro")    return new Date(fromDate + 365 * 24 * 60 * 60 * 1000).toISOString();
+  if (plan === "studio" || plan.startsWith("tool_"))
+                         return new Date(fromDate +  30 * 24 * 60 * 60 * 1000).toISOString();
+  return null;
+}
+
+function extractEmail(data: Record<string, unknown>): string {
+  return (
+    (data.email as string | undefined) ??
+    ((data.customer as Record<string,unknown>|undefined)?.email as string|undefined) ??
+    (data.customer_email as string | undefined) ?? ""
   ).toLowerCase().trim();
+}
 
-  const plan = ((order.metadata as Record<string,unknown>|undefined)?.plan as string|undefined) ?? "";
-  if (!email) { console.error("[webhook] no email in payload"); return; }
+function extractPlan(data: Record<string, unknown>): string {
+  return ((data.metadata as Record<string,unknown>|undefined)?.plan as string|undefined) ?? "";
+}
 
-  const now = new Date().toISOString();
-  const planExpiresAt = plan === "pro"
-    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-    : plan === "studio"
-    ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    : null;
+// ── ORDER_COMPLETED ────────────────────────────────────────────────────────────
+async function handleOrderCompleted(order: Record<string, unknown>, orderId: string) {
+  const email = extractEmail(order);
+  const plan  = extractPlan(order);
+  if (!email) { console.error("[webhook] ORDER_COMPLETED: no email"); return; }
 
-  // 1. Mark waitlist entry as paid
+  const now          = new Date().toISOString();
+  const planExpiresAt = planExpiry(plan);
+
+  // Mark waitlist entry as paid
   await fetch(`${SUPABASE_URL}/rest/v1/waitlist?email=eq.${encodeURIComponent(email)}`, {
     method: "PATCH",
     headers: { ...sbHeaders(), Prefer: "return=minimal" },
     body: JSON.stringify({ paid: true, paid_at: now, revolut_order_id: orderId }),
   });
 
-  // 2. Try to update existing profile (if user already registered)
+  // Update existing profile if registered
   const profilePatch = await fetch(
     `${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}`,
     {
       method: "PATCH",
       headers: { ...sbHeaders(), Prefer: "return=representation" },
-      body: JSON.stringify({ plan, plan_started_at: now, plan_expires_at: planExpiresAt, revolut_order_id: orderId }),
+      body: JSON.stringify({
+        plan, plan_started_at: now, plan_expires_at: planExpiresAt,
+        revolut_order_id: orderId, subscription_status: "active", plan_status: "active",
+        expiry_warning_sent: false,
+      }),
     }
   );
 
   if (profilePatch.ok) {
-    const updatedProfiles: { id: string }[] = await profilePatch.json().catch(() => []);
-    if (updatedProfiles.length > 0 && plan && PLAN_TOOLS[plan]) {
-      const userId = updatedProfiles[0].id;
-      // Delete old tool_access and re-grant
+    const updated: { id: string }[] = await profilePatch.json().catch(() => []);
+    if (updated.length > 0 && plan && PLAN_TOOLS[plan]) {
+      const userId = updated[0].id;
       await fetch(`${SUPABASE_URL}/rest/v1/tool_access?user_id=eq.${userId}`, {
-        method: "DELETE",
-        headers: sbHeaders(),
+        method: "DELETE", headers: sbHeaders(),
       });
       await fetch(`${SUPABASE_URL}/rest/v1/tool_access`, {
         method: "POST",
@@ -82,6 +115,89 @@ async function handleOrderCompleted(order: Record<string, unknown>, orderId: str
   }
 }
 
+// ── SUBSCRIPTION_RENEWED ───────────────────────────────────────────────────────
+async function handleSubscriptionRenewed(payload: Record<string, unknown>) {
+  const order = (payload.order ?? payload) as Record<string, unknown>;
+  const email = extractEmail(order);
+  if (!email) { console.error("[webhook] SUBSCRIPTION_RENEWED: no email"); return; }
+
+  const now = new Date().toISOString();
+
+  // Get current plan to calculate new expiry
+  const profileRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=id,plan,plan_expires_at&limit=1`,
+    { headers: sbHeaders(), cache: "no-store" }
+  );
+  const profiles: { id: string; plan: string; plan_expires_at: string | null }[] =
+    profileRes.ok ? await profileRes.json() : [];
+  if (!profiles.length) return;
+
+  const { id: userId, plan, plan_expires_at } = profiles[0];
+  // Extend from existing expiry if still in future, otherwise from now
+  const baseTime = plan_expires_at && new Date(plan_expires_at) > new Date()
+    ? new Date(plan_expires_at).getTime()
+    : Date.now();
+  const newExpiry = planExpiry(plan, baseTime);
+
+  await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+    method: "PATCH",
+    headers: { ...sbHeaders(), Prefer: "return=minimal" },
+    body: JSON.stringify({
+      plan_expires_at: newExpiry, plan_status: "active", subscription_status: "active",
+      expiry_warning_sent: false,
+    }),
+  });
+
+  // Extend tool_access expiry
+  if (newExpiry) {
+    await fetch(`${SUPABASE_URL}/rest/v1/tool_access?user_id=eq.${userId}`, {
+      method: "PATCH",
+      headers: { ...sbHeaders(), Prefer: "return=minimal" },
+      body: JSON.stringify({ expires_at: newExpiry }),
+    });
+  }
+
+  console.log("[webhook] SUBSCRIPTION_RENEWED", email, "new expiry:", newExpiry);
+}
+
+// ── SUBSCRIPTION_CANCELLED ────────────────────────────────────────────────────
+async function handleSubscriptionCancelled(payload: Record<string, unknown>) {
+  const order = (payload.order ?? payload) as Record<string, unknown>;
+  const email = extractEmail(order);
+  if (!email) { console.error("[webhook] SUBSCRIPTION_CANCELLED: no email"); return; }
+
+  const profileRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
+    { headers: sbHeaders(), cache: "no-store" }
+  );
+  const profiles: { id: string }[] = profileRes.ok ? await profileRes.json() : [];
+  if (!profiles.length) return;
+
+  // Keep access until existing expires_at — just update status
+  await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${profiles[0].id}`, {
+    method: "PATCH",
+    headers: { ...sbHeaders(), Prefer: "return=minimal" },
+    body: JSON.stringify({ plan_status: "cancelled", subscription_status: "cancelled" }),
+  });
+
+  console.log("[webhook] SUBSCRIPTION_CANCELLED", email);
+}
+
+// ── PAYMENT_FAILED ────────────────────────────────────────────────────────────
+async function handlePaymentFailed(payload: Record<string, unknown>) {
+  const order = (payload.order ?? payload) as Record<string, unknown>;
+  const email = extractEmail(order);
+  if (!email) { console.error("[webhook] PAYMENT_FAILED: no email"); return; }
+
+  await sendEmail(
+    email,
+    "Payment failed — Andy'K Music Lab",
+    paymentFailedHtml()
+  );
+  console.log("[webhook] PAYMENT_FAILED email sent to", email);
+}
+
+// ── Main handler ──────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   const webhookSecret = process.env.REVOLUT_WEBHOOK_SECRET;
@@ -98,10 +214,26 @@ export async function POST(req: NextRequest) {
   try { payload = JSON.parse(rawBody); }
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-  if (payload.event === "ORDER_COMPLETED") {
-    const order = (payload.order ?? {}) as Record<string, unknown>;
-    const orderId = (order.id ?? payload.order_id ?? "") as string;
-    await handleOrderCompleted(order, orderId);
+  const event = payload.event as string | undefined;
+  const order = (payload.order ?? {}) as Record<string, unknown>;
+
+  switch (event) {
+    case "ORDER_COMPLETED": {
+      const orderId = (order.id ?? payload.order_id ?? "") as string;
+      await handleOrderCompleted(order, orderId);
+      break;
+    }
+    case "SUBSCRIPTION_RENEWED":
+      await handleSubscriptionRenewed(payload);
+      break;
+    case "SUBSCRIPTION_CANCELLED":
+      await handleSubscriptionCancelled(payload);
+      break;
+    case "PAYMENT_FAILED":
+      await handlePaymentFailed(payload);
+      break;
+    default:
+      console.log("[revolut/webhook] unhandled event:", event);
   }
 
   return NextResponse.json({ ok: true });
