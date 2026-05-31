@@ -84,6 +84,13 @@ export function confirmationHtml(email: string, name: string | null, planLabel: 
 
       ${discountBlock}
 
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e5e5;margin:0 0 32px;">
+        <tr><td style="padding:16px 20px;">
+          <p style="margin:0 0 6px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">Early Access Notice</p>
+          <p style="margin:0;font-family:${SANS};font-size:13px;color:#737373;line-height:1.65;">Andy&rsquo;K Music Lab is currently in early access. Some tools may continue to improve based on user feedback. Your access includes updates during the selected access period.</p>
+        </td></tr>
+      </table>
+
       <a href="https://lab.djandykofficial.com"
          style="display:block;width:100%;box-sizing:border-box;padding:16px 24px;background:#111111;color:#ffffff;font-family:${MONO};font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;text-align:center;">
         LAB.DJANDYKOFFICIAL.COM &rarr;

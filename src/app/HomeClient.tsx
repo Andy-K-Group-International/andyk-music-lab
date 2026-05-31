@@ -212,7 +212,6 @@ export default function HomeClient() {
   const [discountStatus, setDiscountStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
   const [currency, setCurrency] = useState<Currency>("GBP");
   const [pricingTab, setPricingTab] = useState<"plans" | "tools">("plans");
-  const [vatBusiness, setVatBusiness] = useState(false);
   const [introMuted, setIntroMuted] = useState(true);
   const [introPlaying, setIntroPlaying] = useState(false);
   const [introProgress, setIntroProgress] = useState(0);
@@ -346,8 +345,6 @@ export default function HomeClient() {
 
   const discountedGbp = (gbp: number) =>
     discountPercent > 0 ? Math.round(gbp * (1 - discountPercent / 100)) : gbp;
-
-  const withVat = (gbp: number) => vatBusiness ? gbp / 1.2 : gbp;
 
   const handleCheckout = async (plan: string) => {
     setLoadingPlan(plan);
@@ -745,32 +742,9 @@ export default function HomeClient() {
             </div>
           </div>
 
-          {/* VAT toggle */}
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginBottom: 6 }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#a3a3a3", letterSpacing: "0.04em" }}>
-              I&apos;m purchasing as a business (ex. VAT)
-            </span>
-            <button
-              onClick={() => setVatBusiness(v => !v)}
-              style={{
-                width: 36, height: 20, borderRadius: 10,
-                background: vatBusiness ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.2)",
-                border: "none", cursor: "pointer", position: "relative",
-                transition: "background 0.2s ease", flexShrink: 0,
-              }}
-            >
-              <span style={{
-                position: "absolute", top: 2,
-                left: vatBusiness ? 18 : 2,
-                width: 16, height: 16, borderRadius: 8,
-                background: vatBusiness ? "#111111" : "#ffffff",
-                transition: "left 0.2s ease",
-                display: "block",
-              }} />
-            </button>
-          </div>
+          {/* VAT note */}
           <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#a3a3a3", textAlign: "center", marginBottom: 20 }}>
-            UK VAT 20% may apply. Prices shown ex. VAT for business customers.
+            VAT/tax may apply depending on your location and payment provider.
           </p>
 
           {/* Currency selector */}
@@ -901,15 +875,12 @@ export default function HomeClient() {
                         className="pricing-price"
                         style={discountPercent > 0 ? { textDecoration: "line-through", opacity: 0.4, fontSize: "1.1rem" } : undefined}
                       >
-                        {convert(withVat(plan.gbpPrice), currency)}
+                        {convert(plan.gbpPrice, currency)}
                       </span>
                       {discountPercent > 0 && (
                         <span className="pricing-price" style={{ marginLeft: 8 }}>
-                          {convert(withVat(discountedGbp(plan.gbpPrice)), currency)}
+                          {convert(discountedGbp(plan.gbpPrice), currency)}
                         </span>
-                      )}
-                      {vatBusiness && (
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.5)", marginLeft: 6, verticalAlign: "middle" }}>ex. VAT</span>
                       )}
                       <span className="pricing-period">{t.pricing[plan.periodKey]}</span>
                       {discountPercent > 0 && (
@@ -954,15 +925,12 @@ export default function HomeClient() {
                           className="pricing-price"
                           style={discountPercent > 0 ? { textDecoration: "line-through", opacity: 0.4, fontSize: "1.1rem" } : undefined}
                         >
-                          {convert(withVat(tool.gbpPrice), currency)}
+                          {convert(tool.gbpPrice, currency)}
                         </span>
                         {discountPercent > 0 && (
                           <span className="pricing-price" style={{ marginLeft: 8 }}>
-                            {convert(withVat(discountedGbp(tool.gbpPrice)), currency)}
+                            {convert(discountedGbp(tool.gbpPrice), currency)}
                           </span>
-                        )}
-                        {vatBusiness && (
-                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.5)", marginLeft: 6, verticalAlign: "middle" }}>ex. VAT</span>
                         )}
                         <span className="pricing-period">/mo</span>
                         {discountPercent > 0 && (
@@ -986,7 +954,7 @@ export default function HomeClient() {
                 ))}
               </div>
               <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#737373", textAlign: "center", marginTop: 24 }}>
-                Studio Pass includes all 8 tools for {convert(withVat(49), currency)}/mo — save vs buying individually
+                Buying all tools individually would cost {convert(82, currency)}/month. Full Lab access gives you all 8 tools for less than buying them separately.
               </p>
             </>
           )}
