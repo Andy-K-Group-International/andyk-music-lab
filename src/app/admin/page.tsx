@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 const ADMIN_KEY = "andyk_lab_admin";
 const _AE = "Y2VvQGFuZHlrZ3JvdXAuY29t";
@@ -14,13 +15,18 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
 
     if (email === atob(_AE) && password === atob(_AP)) {
+      // Establish Supabase session so admin API routes can verify identity server-side
+      try {
+        const supabase = createClient();
+        await supabase.auth.signInWithPassword({ email, password });
+      } catch { /* non-critical — API will return 401 if session missing */ }
       try { localStorage.setItem(ADMIN_KEY, "true"); } catch {}
       router.push("/dashboard");
     } else {

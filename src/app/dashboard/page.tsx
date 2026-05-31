@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 const ADMIN_KEY = "andyk_lab_admin";
 
@@ -33,6 +34,34 @@ type Entry = {
 
 type Filter = "all" | "single" | "studio" | "pro";
 
+type DiscountCode = {
+  id: string;
+  code: string;
+  discount_percent: number;
+  used: boolean;
+  used_by_email: string | null;
+  expires_at: string | null;
+  plan_restriction: string | null;
+  created_for_email: string | null;
+  created_at: string;
+};
+
+const PLAN_OPTIONS = [
+  { value: "all",       label: "All Plans" },
+  { value: "studio",    label: "Studio Pass" },
+  { value: "pro",       label: "Pro Pass" },
+  { value: "single",    label: "Single Session" },
+  { value: "mastering", label: "Mastering Tool" },
+  { value: "bpm",       label: "BPM + Key" },
+  { value: "planner",   label: "DJ Set Planner" },
+];
+
+function codeStatus(c: DiscountCode): { label: string; color: string } {
+  if (c.used) return { label: "Used", color: "#8a8a8a" };
+  if (c.expires_at && new Date(c.expires_at) < new Date()) return { label: "Expired", color: "#ef4444" };
+  return { label: "Active", color: "#16a34a" };
+}
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const S = {
@@ -62,6 +91,16 @@ export default function DashboardPage() {
   const [notifyingAll, setNotifyingAll] = useState(false);
   const [notifyAllResult, setNotifyAllResult] = useState<string | null>(null);
 
+  // Discount generator state
+  const [genEmail, setGenEmail] = useState("");
+  const [genPercent, setGenPercent] = useState(40);
+  const [genPlan, setGenPlan] = useState("all");
+  const [genExpiry, setGenExpiry] = useState(72);
+  const [genLoading, setGenLoading] = useState(false);
+  const [genResult, setGenResult] = useState<{ code: string; email: string } | { error: string } | null>(null);
+  const [codes, setCodes] = useState<DiscountCode[]>([]);
+  const [codesLoading, setCodesLoading] = useState(false);
+
   useEffect(() => {
     try {
       if (localStorage.getItem(ADMIN_KEY) !== "true") { router.replace("/admin"); return; }
@@ -77,11 +116,53 @@ export default function DashboardPage() {
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (ready) fetchEntries(); }, [ready, fetchEntries]);
+  const fetchCodes = useCallback(async () => {
+    setCodesLoading(true);
+    try {
+      const res = await fetch("/api/admin/discount/generate");
+      if (res.ok) { const { codes: c } = await res.json(); setCodes(c ?? []); }
+    } finally { setCodesLoading(false); }
+  }, []);
 
-  function logout() {
+  useEffect(() => { if (ready) { fetchEntries(); fetchCodes(); } }, [ready, fetchEntries, fetchCodes]);
+
+  async function logout() {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch { /* ignore */ }
     try { localStorage.removeItem(ADMIN_KEY); } catch {}
     router.replace("/admin");
+  }
+
+  async function generateDiscount(e: React.FormEvent) {
+    e.preventDefault();
+    setGenLoading(true);
+    setGenResult(null);
+    try {
+      const res = await fetch("/api/admin/discount/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: genEmail.trim().toLowerCase(),
+          discount_percent: genPercent,
+          plan_restriction: genPlan,
+          expiry_hours: genExpiry,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setGenResult({ code: data.code, email: genEmail.trim().toLowerCase() });
+        setGenEmail("");
+        fetchCodes();
+      } else {
+        setGenResult({ error: data.error ?? "Something went wrong" });
+      }
+    } catch {
+      setGenResult({ error: "Network error" });
+    } finally {
+      setGenLoading(false);
+    }
   }
 
   async function notifyOne(id: string) {
@@ -259,6 +340,156 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+        {/* Discount Generator */}
+        <div style={{ borderTop: "1px solid #e5e5e5", paddingTop: 40, marginTop: 48 }}>
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#8a8a8a", margin: "0 0 4px" }}>
+              Discount Generator
+            </p>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111111", margin: 0 }}>
+              Generate &amp; send a personalized discount code
+            </h2>
+          </div>
+
+          <form onSubmit={generateDiscount} style={{ display: "flex", flexDirection: "column" as const, gap: 12, maxWidth: 580, marginBottom: 32 }}>
+            {/* Email */}
+            <div>
+              <label style={{ display: "block", fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: "#8a8a8a", marginBottom: 5 }}>
+                Send to email
+              </label>
+              <input
+                type="email"
+                required
+                value={genEmail}
+                onChange={e => setGenEmail(e.target.value)}
+                placeholder="name@example.com"
+                style={{ width: "100%", padding: "9px 12px", border: "1px solid #e5e5e5", borderRadius: 0, fontSize: 13, fontFamily: "var(--font-mono, monospace)", outline: "none", boxSizing: "border-box" as const, color: "#111111" }}
+              />
+            </div>
+
+            {/* Discount %, Plan, Expiry — row */}
+            <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 120px", gap: 10 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: "#8a8a8a", marginBottom: 5 }}>
+                  Discount %
+                </label>
+                <input
+                  type="number"
+                  required
+                  min={5}
+                  max={100}
+                  value={genPercent}
+                  onChange={e => setGenPercent(Number(e.target.value))}
+                  style={{ width: "100%", padding: "9px 12px", border: "1px solid #e5e5e5", borderRadius: 0, fontSize: 13, fontFamily: "var(--font-mono, monospace)", outline: "none", boxSizing: "border-box" as const, color: "#111111" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: "#8a8a8a", marginBottom: 5 }}>
+                  Plan
+                </label>
+                <select
+                  value={genPlan}
+                  onChange={e => setGenPlan(e.target.value)}
+                  style={{ width: "100%", padding: "9px 12px", border: "1px solid #e5e5e5", borderRadius: 0, fontSize: 13, fontFamily: "var(--font-mono, monospace)", outline: "none", boxSizing: "border-box" as const, color: "#111111", background: "#ffffff", cursor: "pointer" }}
+                >
+                  {PLAN_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: "#8a8a8a", marginBottom: 5 }}>
+                  Expires (hrs)
+                </label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  value={genExpiry}
+                  onChange={e => setGenExpiry(Number(e.target.value))}
+                  style={{ width: "100%", padding: "9px 12px", border: "1px solid #e5e5e5", borderRadius: 0, fontSize: 13, fontFamily: "var(--font-mono, monospace)", outline: "none", boxSizing: "border-box" as const, color: "#111111" }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={genLoading}
+              style={{
+                alignSelf: "flex-start",
+                padding: "10px 22px",
+                background: "#111111",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: 0,
+                fontSize: 12,
+                fontWeight: 700,
+                fontFamily: "var(--font-mono, monospace)",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase" as const,
+                cursor: genLoading ? "wait" : "pointer",
+                opacity: genLoading ? 0.6 : 1,
+              }}
+            >
+              {genLoading ? "Sending…" : "Generate & Send →"}
+            </button>
+
+            {/* Result */}
+            {genResult && "error" in genResult && (
+              <p style={{ fontSize: 12, color: "#ef4444", margin: 0, fontFamily: "var(--font-mono, monospace)" }}>
+                ✕ {genResult.error}
+              </p>
+            )}
+            {genResult && "code" in genResult && (
+              <div style={{ padding: "16px 20px", border: "1px solid #e5e5e5", background: "#fafafa" }}>
+                <p style={{ margin: "0 0 6px", fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#16a34a" }}>
+                  ✓ Discount sent to {genResult.email}
+                </p>
+                <p style={{ margin: 0, fontSize: 20, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "#111111", letterSpacing: "0.06em" }}>
+                  {genResult.code}
+                </p>
+              </div>
+            )}
+          </form>
+
+          {/* Recent codes table */}
+          <p style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#8a8a8a", marginBottom: 12 }}>
+            Recent Codes
+          </p>
+          {codesLoading ? (
+            <p style={{ fontSize: 13, color: "#8a8a8a" }}>Loading…</p>
+          ) : codes.length === 0 ? (
+            <p style={{ fontSize: 13, color: "#8a8a8a" }}>No codes yet.</p>
+          ) : (
+            <div style={{ border: "1px solid #e5e5e5", overflow: "hidden" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.8fr 50px 100px 1.5fr 140px 70px", gap: 0, background: "#f5f5f5", borderBottom: "1px solid #e5e5e5", padding: "7px 14px" }}>
+                {["Code", "%", "Plan", "Sent To", "Expires", "Status"].map(h => (
+                  <span key={h} style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#8a8a8a" }}>{h}</span>
+                ))}
+              </div>
+              {codes.map((c, i) => {
+                const st = codeStatus(c);
+                return (
+                  <div
+                    key={c.id}
+                    style={{ display: "grid", gridTemplateColumns: "1.8fr 50px 100px 1.5fr 140px 70px", gap: 0, padding: "9px 14px", borderBottom: i < codes.length - 1 ? "1px solid #f0f0f0" : "none", alignItems: "center" }}
+                  >
+                    <span style={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "#111111" }}>{c.code}</span>
+                    <span style={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", color: "#525252" }}>{c.discount_percent}%</span>
+                    <span style={{ fontSize: 11, color: "#737373" }}>{c.plan_restriction ?? "All"}</span>
+                    <span style={{ fontSize: 12, color: "#525252", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{c.created_for_email ?? "—"}</span>
+                    <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#8a8a8a" }}>
+                      {c.expires_at ? new Date(c.expires_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                    </span>
+                    <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: st.color }}>{st.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
