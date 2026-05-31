@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
       currency: "GBP",
       description: "Single Session — Andy'K Music Lab",
       redirect_url: `${APP_URL}/success?plan=single`,
+      cancel_url:   `${APP_URL}/payment-failed`,
       metadata: { plan: "single" },
     }),
   });
@@ -68,5 +69,5 @@ export async function POST(req: NextRequest) {
 
   const order = await res.json();
   const checkout_url = order.checkout_url ?? `https://checkout.revolut.com/pay/${order.public_id}`;
-  return NextResponse.json({ checkout_url });
+  return NextResponse.json({ checkout_url, order_id: order.id });
 }

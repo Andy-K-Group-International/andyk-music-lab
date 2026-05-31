@@ -46,7 +46,55 @@ function wrap(inner: string): string {
 </html>`;
 }
 
-// ── Template 0: Personal discount (admin-sent) ───────────────────────────────
+// ── Template 0: Payment success (triggered server-side after Revolut verify) ──
+
+export function paymentSuccessHtml(planLabel: string): string {
+  const earlyAccessBlock = `
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e5e5;margin:0 0 32px;">
+        <tr><td style="padding:16px 20px;">
+          <p style="margin:0 0 6px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">Early Access Notice</p>
+          <p style="margin:0;font-family:${SANS};font-size:13px;color:#737373;line-height:1.65;">Andy&rsquo;K Music Lab is currently in early access. Some tools may continue to improve based on user feedback. Your access includes updates during the selected access period.</p>
+        </td></tr>
+      </table>`;
+
+  return wrap(`
+  <tr>
+    <td style="padding:48px 48px 56px;">
+
+      <p style="margin:0 0 20px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">
+        PAYMENT CONFIRMED
+      </p>
+
+      <h1 style="margin:0 0 32px;font-family:${SANS};font-size:28px;font-weight:700;color:#111111;letter-spacing:-0.02em;line-height:1.2;">
+        Welcome to Andy&rsquo;K <span style="font-family:${SERIF};font-style:italic;font-weight:400;">Music Lab</span>
+      </h1>
+
+      <p style="margin:0 0 28px;font-family:${SANS};font-size:15px;font-weight:400;color:#111111;line-height:1.75;">
+        Your <strong style="font-weight:600;">${planLabel}</strong> access is now active. Create your account to access all the tools.
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e5e5;margin:0 0 28px;">
+        <tr><td style="padding:20px 24px;">
+          <p style="margin:0 0 6px;font-family:${MONO};font-size:10px;font-weight:700;color:#a3a3a3;letter-spacing:0.2em;text-transform:uppercase;">Create Your Account</p>
+          <p style="margin:0;font-family:${SANS};font-size:14px;color:#111111;line-height:1.65;">
+            Set up your account at:<br/>
+            <a href="https://lab.djandykofficial.com/register" style="color:#111111;font-family:${MONO};font-size:13px;">lab.djandykofficial.com/register</a>
+          </p>
+        </td></tr>
+      </table>
+
+      ${earlyAccessBlock}
+
+      <a href="https://lab.djandykofficial.com/register"
+         style="display:block;width:100%;box-sizing:border-box;padding:16px 24px;background:#111111;color:#ffffff;font-family:${MONO};font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;text-align:center;">
+        ACCESS THE LAB &rarr;
+      </a>
+
+    </td>
+  </tr>`);
+}
+
+// ── Template 0b: Personal discount (admin-sent) ───────────────────────────────
 
 export function personalDiscountHtml(discountPercent: number, code: string, expiryHours: number): string {
   return wrap(`

@@ -358,6 +358,9 @@ export default function HomeClient() {
       });
       const data = await res.json();
       if (data.checkout_url) {
+        if (data.order_id) {
+          try { sessionStorage.setItem("andyk_order_id", data.order_id); } catch { /* ignore */ }
+        }
         window.location.href = data.checkout_url;
       } else {
         throw new Error("No checkout URL");
