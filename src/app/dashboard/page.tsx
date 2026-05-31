@@ -34,6 +34,25 @@ type Entry = {
 
 type Filter = "all" | "single" | "studio" | "pro";
 
+type EdRequest = {
+  id: string;
+  name: string;
+  email: string;
+  website: string | null;
+  students_count: number | null;
+  type: string | null;
+  message: string | null;
+  status: string;
+  created_at: string;
+};
+
+const ED_STATUS_COLOR: Record<string, string> = {
+  new:      "#111111",
+  reviewed: "#737373",
+  accepted: "#16a34a",
+  rejected: "#ef4444",
+};
+
 type DiscountCode = {
   id: string;
   code: string;
@@ -91,6 +110,10 @@ export default function DashboardPage() {
   const [notifyingAll, setNotifyingAll] = useState(false);
   const [notifyAllResult, setNotifyAllResult] = useState<string | null>(null);
 
+  // Education requests state
+  const [edRequests, setEdRequests] = useState<EdRequest[]>([]);
+  const [edLoading, setEdLoading] = useState(false);
+
   // Discount generator state
   const [genEmail, setGenEmail] = useState("");
   const [genPercent, setGenPercent] = useState(40);
@@ -116,6 +139,14 @@ export default function DashboardPage() {
     } finally { setLoading(false); }
   }, []);
 
+  const fetchEdRequests = useCallback(async () => {
+    setEdLoading(true);
+    try {
+      const res = await fetch("/api/admin/education");
+      if (res.ok) { const { requests } = await res.json(); setEdRequests(requests ?? []); }
+    } finally { setEdLoading(false); }
+  }, []);
+
   const fetchCodes = useCallback(async () => {
     setCodesLoading(true);
     try {
@@ -124,7 +155,7 @@ export default function DashboardPage() {
     } finally { setCodesLoading(false); }
   }, []);
 
-  useEffect(() => { if (ready) { fetchEntries(); fetchCodes(); } }, [ready, fetchEntries, fetchCodes]);
+  useEffect(() => { if (ready) { fetchEntries(); fetchCodes(); fetchEdRequests(); } }, [ready, fetchEntries, fetchCodes, fetchEdRequests]);
 
   async function logout() {
     try {
@@ -486,6 +517,56 @@ export default function DashboardPage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+
+
+        {/* Education Access Requests */}
+        <div style={{ borderTop: "1px solid #e5e5e5", paddingTop: 40, marginTop: 48 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+            <div>
+              <p style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#8a8a8a", margin: "0 0 4px" }}>
+                Education Access
+              </p>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111111", margin: 0 }}>
+                {edLoading ? "Loading…" : `${edRequests.length} request${edRequests.length !== 1 ? "s" : ""}`}
+              </h2>
+            </div>
+            <button onClick={fetchEdRequests} style={S.btn("ghost")}>↻</button>
+          </div>
+
+          {edLoading ? (
+            <p style={{ fontSize: 13, color: "#8a8a8a" }}>Loading…</p>
+          ) : edRequests.length === 0 ? (
+            <p style={{ fontSize: 13, color: "#8a8a8a" }}>No requests yet.</p>
+          ) : (
+            <div style={{ border: "1px solid #e5e5e5", overflow: "hidden" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.4fr 100px 1.4fr 70px 80px 110px", gap: 0, background: "#f5f5f5", borderBottom: "1px solid #e5e5e5", padding: "7px 14px" }}>
+                {["Name", "Type", "Email", "Students", "Status", "Date"].map(h => (
+                  <span key={h} style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#8a8a8a" }}>{h}</span>
+                ))}
+              </div>
+              {edRequests.map((r, i) => (
+                <div
+                  key={r.id}
+                  title={r.message ?? undefined}
+                  style={{ display: "grid", gridTemplateColumns: "1.4fr 100px 1.4fr 70px 80px 110px", gap: 0, padding: "10px 14px", borderBottom: i < edRequests.length - 1 ? "1px solid #f0f0f0" : "none", alignItems: "center" }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                    {r.name}
+                  </span>
+                  <span style={{ fontSize: 11, color: "#737373" }}>{r.type ?? "—"}</span>
+                  <span style={{ fontSize: 12, color: "#525252", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{r.email}</span>
+                  <span style={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", color: "#525252" }}>{r.students_count ?? "—"}</span>
+                  <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: ED_STATUS_COLOR[r.status] ?? "#111111", textTransform: "capitalize" as const }}>
+                    {r.status}
+                  </span>
+                  <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#8a8a8a" }}>
+                    {new Date(r.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>

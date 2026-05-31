@@ -55,6 +55,9 @@ export default function FooterClient() {
               {l.label}
             </Link>
           ))}
+          <Link href="/education-access" className="footer-link" style={{ fontSize: 11 }}>
+            Education Access
+          </Link>
           <Link href="/admin" className="footer-link" style={{ fontSize: 10, opacity: 0.4 }}>
             Admin
           </Link>

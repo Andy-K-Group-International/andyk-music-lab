@@ -571,6 +571,58 @@ export default function HomeClient() {
 
       <div className="divider-glow" />
 
+      {/* ── EDUCATION ACCESS ── */}
+      <section className="section-surface py-28 px-6">
+        <div className="max-w-3xl mx-auto">
+          <ScrollReveal>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(0,0,0,0.38)" }}>
+              Education Access
+            </span>
+            <h2 className="section-heading mt-3 mb-10">
+              Limited Education <span className="serif-accent">Access</span>
+            </h2>
+          </ScrollReveal>
+          <ScrollReveal delay={1}>
+            <div style={{ fontSize: 16, color: "#525252", lineHeight: 1.85, fontFamily: "var(--font-sans)" }}>
+              <p style={{ marginBottom: 20 }}>
+                Selected music schools, DJ courses and producer communities can request free or discounted access to Andy&apos;K Music Lab for students.
+              </p>
+              <p style={{ marginBottom: 20 }}>
+                In exchange, we may ask for student feedback, community visibility, or a simple mention as an education partner.
+              </p>
+              <p>
+                This is designed for learning environments where producers and DJs need practical browser-based tools for mastering, BPM + key detection, DJ set planning, loudness, stems and creative workflow.
+              </p>
+            </div>
+            <div style={{ marginTop: 40 }}>
+              <a
+                href="/education-access"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "14px 28px",
+                  background: "#111111",
+                  color: "#ffffff",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                  borderRadius: 0,
+                  border: "none",
+                }}
+              >
+                Request Education Access →
+              </a>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      <div className="divider-glow" />
+
       {/* ── FOUNDER ── */}
       <section className="section-surface py-28 px-6">
         <div className="max-w-3xl mx-auto">
