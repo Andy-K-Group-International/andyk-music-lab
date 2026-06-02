@@ -73,8 +73,12 @@ function confirmationEmailHtml(name: string): string {
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { name, email, website, students_count, type, message } = body;
+  const { name, email, website, students_count, type, message,
+          accepted_pricing_terms, accepted_pricing_terms_at, accepted_pricing_terms_version } = body;
 
+  if (accepted_pricing_terms !== true) {
+    return NextResponse.json({ error: "pricing_terms_required" }, { status: 400 });
+  }
   if (!name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });
   if (!email?.trim()) return NextResponse.json({ error: "Email is required" }, { status: 400 });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
@@ -99,6 +103,9 @@ export async function POST(req: NextRequest) {
       students_count: studentsNum,
       type: type || null,
       message: message?.trim() || null,
+      accepted_pricing_terms: accepted_pricing_terms === true,
+      accepted_pricing_terms_at: accepted_pricing_terms_at ?? null,
+      accepted_pricing_terms_version: accepted_pricing_terms_version ?? null,
     }),
   });
 

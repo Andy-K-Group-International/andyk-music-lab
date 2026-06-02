@@ -212,6 +212,8 @@ export default function HomeClient() {
   const [discountStatus, setDiscountStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
   const [currency, setCurrency] = useState<Currency>("GBP");
   const [pricingTab, setPricingTab] = useState<"plans" | "tools">("plans");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState("");
   const [introMuted, setIntroMuted] = useState(true);
   const [introPlaying, setIntroPlaying] = useState(false);
   const [introProgress, setIntroProgress] = useState(0);
@@ -347,6 +349,11 @@ export default function HomeClient() {
     discountPercent > 0 ? Math.round(gbp * (1 - discountPercent / 100)) : gbp;
 
   const handleCheckout = async (plan: string) => {
+    if (!termsAccepted) {
+      setTermsError("Please accept the Pricing & Access Terms before continuing.");
+      return;
+    }
+    setTermsError("");
     setLoadingPlan(plan);
     try {
       const endpoint =
@@ -354,7 +361,12 @@ export default function HomeClient() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, discount_code: discountCode || undefined }),
+        body: JSON.stringify({
+          plan,
+          discount_code: discountCode || undefined,
+          accepted_pricing_terms: true,
+          accepted_pricing_terms_version: "v1.0",
+        }),
       });
       const data = await res.json();
       if (data.checkout_url) {
@@ -927,6 +939,30 @@ export default function HomeClient() {
                 Join the waitlist to lock in your discount →
               </button>
             </p>
+          </div>
+
+          {/* Terms acceptance */}
+          <div style={{ marginBottom: 20, padding: "14px 18px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)" }}>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={e => { setTermsAccepted(e.target.checked); if (termsError) setTermsError(""); }}
+                style={{ marginTop: 2, width: 14, height: 14, flexShrink: 0, accentColor: "#ffffff", cursor: "pointer" }}
+              />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.65)", lineHeight: 1.6 }}>
+                I have read and agree to the{" "}
+                <a href="/pricing-terms" target="_blank" rel="noopener noreferrer" style={{ color: "#ffffff", textDecoration: "underline" }}>
+                  Pricing &amp; Access Terms
+                </a>
+                , including the discount, refund and education access rules.
+              </span>
+            </label>
+            {termsError && (
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#f87171", margin: "8px 0 0", letterSpacing: "0.05em" }}>
+                {termsError}
+              </p>
+            )}
           </div>
 
           {/* Plans tab */}

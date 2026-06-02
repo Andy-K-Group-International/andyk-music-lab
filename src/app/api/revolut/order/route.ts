@@ -29,7 +29,10 @@ async function applyAndMarkCode(code: string, email?: string): Promise<number> {
 }
 
 export async function POST(req: NextRequest) {
-  const { plan, discount_code } = await req.json().catch(() => ({}));
+  const { plan, discount_code, accepted_pricing_terms, accepted_pricing_terms_version } = await req.json().catch(() => ({}));
+  if (accepted_pricing_terms !== true) {
+    return NextResponse.json({ error: "pricing_terms_required" }, { status: 400 });
+  }
   if (plan !== "single") {
     return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
   }
@@ -57,7 +60,12 @@ export async function POST(req: NextRequest) {
       description: "Single Session — Andy'K Music Lab",
       redirect_url: `${APP_URL}/success?plan=single`,
       cancel_url:   `${APP_URL}/payment-failed`,
-      metadata: { plan: "single" },
+      metadata: {
+        plan: "single",
+        accepted_pricing_terms: "true",
+        accepted_pricing_terms_version: accepted_pricing_terms_version ?? "v1.0",
+        accepted_pricing_terms_at: new Date().toISOString(),
+      },
     }),
   });
 

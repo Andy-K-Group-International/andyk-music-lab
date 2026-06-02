@@ -40,12 +40,17 @@ export default function EducationAccessForm() {
   const [students, setStudents] = useState("");
   const [type, setType] = useState("Music School");
   const [message, setMessage] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!termsAccepted) {
+      setError("Please accept the Pricing & Access Terms before submitting.");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -59,6 +64,9 @@ export default function EducationAccessForm() {
         students_count: students ? parseInt(students, 10) : null,
         type,
         message: message.trim() || null,
+        accepted_pricing_terms: true,
+        accepted_pricing_terms_at: new Date().toISOString(),
+        accepted_pricing_terms_version: "v1.0",
       }),
     });
 
@@ -168,6 +176,25 @@ export default function EducationAccessForm() {
                 rows={4}
                 style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
               />
+            </div>
+
+            {/* Terms acceptance */}
+            <div style={{ borderTop: "1px solid #e5e5e5", paddingTop: 20 }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={e => { setTermsAccepted(e.target.checked); if (error) setError(""); }}
+                  style={{ marginTop: 3, width: 14, height: 14, flexShrink: 0, accentColor: "#111111", cursor: "pointer" }}
+                />
+                <span style={{ fontSize: 11, color: "#525252", lineHeight: 1.65, fontFamily: "var(--font-mono, monospace)" }}>
+                  I have read and agree to the{" "}
+                  <a href="/pricing-terms" target="_blank" rel="noopener noreferrer" style={{ color: "#111111", textDecoration: "underline" }}>
+                    Pricing &amp; Access Terms
+                  </a>
+                  , including the Education Access &amp; School Discount Rules.
+                </span>
+              </label>
             </div>
 
             {error && (

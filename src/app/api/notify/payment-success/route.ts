@@ -74,6 +74,9 @@ export async function POST(req: NextRequest) {
     order.email ?? order.customer?.email ?? order.metadata?.email ?? null;
   const planKey: string = order.metadata?.plan ?? "";
   const planLabel = PLAN_LABELS[planKey] ?? "Music Lab Access";
+  const termsAccepted = order.metadata?.accepted_pricing_terms === "true";
+  const termsAt: string | null = order.metadata?.accepted_pricing_terms_at ?? null;
+  const termsVersion: string | null = order.metadata?.accepted_pricing_terms_version ?? null;
 
   // 4. Upsert pending_access (idempotent by order_id) regardless of email availability
   if (planKey) {
@@ -88,6 +91,9 @@ export async function POST(req: NextRequest) {
           order_id,
           status: "paid",
           access_granted: false,
+          accepted_pricing_terms: termsAccepted,
+          accepted_pricing_terms_at: termsAt,
+          accepted_pricing_terms_version: termsVersion,
           updated_at: new Date().toISOString(),
         }),
       }
