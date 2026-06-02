@@ -33,7 +33,7 @@ const en: TranslationKeys = {
   pricing: {
     label: "PRICING",
     heading: "Simple transparent pricing",
-    subtitle: "Join the waitlist for early access. Payments via Revolut — coming soon.",
+    subtitle: "Early access is open. Payments are securely processed by Revolut Business.",
     earlyAccess: "EARLY ACCESS — FIRST 40 MEMBERS GET 40% OFF THE YEARLY PLAN",
     earlyClosed: "EARLY ACCESS CLOSED — JOIN WAITLIST FOR NEXT ROUND",
     spotsRemaining: "SPOTS REMAINING",
@@ -102,7 +102,7 @@ const sk: TranslationKeys = {
   pricing: {
     label: "CENY",
     heading: "Jednoduché transparentné ceny",
-    subtitle: "Pridaj sa na zoznam pre skorý prístup. Platby cez Revolut — čoskoro.",
+    subtitle: "Skorý prístup je otvorený. Platby sú bezpečne spracované cez Revolut Business.",
     earlyAccess: "SKORÝ PRÍSTUP — PRVÝCH 40 ČLENOV DOSTANE 40% ZĽAVU NA ROČNÝ PLÁN",
     earlyClosed: "SKORÝ PRÍSTUP UZAVRETÝ — PRIDAJ SA NA ZOZNAM",
     spotsRemaining: "MIEST ZOSTÁVA",
@@ -171,7 +171,7 @@ const de: TranslationKeys = {
   pricing: {
     label: "PREISE",
     heading: "Einfache transparente Preise",
-    subtitle: "Tritt der Warteliste für Früheinstieg bei. Zahlungen über Revolut — demnächst.",
+    subtitle: "Früheinstieg ist offen. Zahlungen werden sicher über Revolut Business verarbeitet.",
     earlyAccess: "FRÜHEINSTIEG — DIE ERSTEN 40 MITGLIEDER ERHALTEN 40% RABATT AUF DEN JAHRESPLAN",
     earlyClosed: "FRÜHEINSTIEG GESCHLOSSEN — WARTELISTE BEITRETEN",
     spotsRemaining: "PLÄTZE VERFÜGBAR",
@@ -240,7 +240,7 @@ const es: TranslationKeys = {
   pricing: {
     label: "PRECIOS",
     heading: "Precios simples y transparentes",
-    subtitle: "Únete a la lista de espera para acceso anticipado. Pagos vía Revolut — próximamente.",
+    subtitle: "El acceso anticipado está abierto. Los pagos se procesan de forma segura a través de Revolut Business.",
     earlyAccess: "ACCESO ANTICIPADO — LOS PRIMEROS 40 MIEMBROS OBTIENEN 40% DE DESCUENTO EN EL PLAN ANUAL",
     earlyClosed: "ACCESO ANTICIPADO CERRADO — ÚNETE A LA LISTA DE ESPERA",
     spotsRemaining: "LUGARES DISPONIBLES",
