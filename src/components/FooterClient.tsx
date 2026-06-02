@@ -38,6 +38,9 @@ export default function FooterClient() {
               <a href="https://djandykofficial.com" target="_blank" rel="noopener noreferrer" className="footer-link">
                 djandykofficial.com ↗
               </a>
+              <a href="https://www.instagram.com/andykmusiclab/" target="_blank" rel="noopener noreferrer" className="footer-link">
+                @andykmusiclab ↗
+              </a>
             </div>
           </div>
 

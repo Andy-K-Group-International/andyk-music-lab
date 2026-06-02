@@ -426,6 +426,17 @@ export default function HomeClient() {
               <span className="trust-badge"><span className="trust-check">✓</span>{t.hero.badge2}</span>
               <span className="trust-badge"><span className="trust-check">✓</span>{t.hero.badge3}</span>
             </div>
+
+            <div style={{ marginTop: 20, textAlign: "center" }}>
+              <a
+                href="https://www.instagram.com/andykmusiclab/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#737373", textDecoration: "none", letterSpacing: "0.04em" }}
+              >
+                Follow on Instagram: @andykmusiclab →
+              </a>
+            </div>
           </ScrollReveal>
         </div>
       </section>
