@@ -136,21 +136,25 @@ function RegisterForm() {
           </div>
 
           {/* GDPR */}
-          <label style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={gdpr}
-              onChange={e => { setGdpr(e.target.checked); if (error) setError(""); }}
-              style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: "#111111", cursor: "pointer" }}
-            />
-            <span style={{ fontSize: 12, color: "#525252", lineHeight: 1.6, fontFamily: "var(--font-sans)" }}>
-              I agree to the{" "}
-              <Link href="/privacy-policy" style={{ color: "#111111", textDecoration: "underline" }}>Privacy Policy</Link>
-              {" "}and{" "}
-              <Link href="/terms-and-conditions" style={{ color: "#111111", textDecoration: "underline" }}>Terms</Link>.
-              {" "}My data will be processed to provide access to Andy&apos;K Music Lab.
-            </span>
-          </label>
+          <div>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={gdpr}
+                onChange={e => { setGdpr(e.target.checked); if (error) setError(""); }}
+                style={{ marginTop: 3, width: 14, height: 14, flexShrink: 0, accentColor: "#111111", cursor: "pointer", borderRadius: 0 }}
+              />
+              <span style={{ fontSize: 11, color: "#525252", lineHeight: 1.65, fontFamily: "var(--font-mono)" }}>
+                I confirm that I have read and understood the{" "}
+                <Link href="/privacy-policy" style={{ color: "#111111", textDecoration: "underline" }}>Privacy Policy</Link>
+                {" "}and agree that my personal data may be processed for the purpose of creating and managing my Andy&apos;K Music Lab account, payment access, tool access and related support. I have also read the{" "}
+                <Link href="/pricing-terms" style={{ color: "#111111", textDecoration: "underline" }}>Pricing &amp; Access Terms</Link>.
+              </span>
+            </label>
+            <p style={{ fontSize: 11, color: "#8a8a8a", fontFamily: "var(--font-mono)", lineHeight: 1.6, margin: "10px 0 0", paddingLeft: 26 }}>
+              Your account access is linked to the email address used during checkout. Please register with the same email used for payment.
+            </p>
+          </div>
 
           {error && (
             <p style={{ fontSize: 13, color: "#ef4444", margin: 0 }}>{error}</p>

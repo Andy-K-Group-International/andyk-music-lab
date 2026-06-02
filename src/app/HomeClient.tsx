@@ -1015,9 +1015,21 @@ export default function HomeClient() {
           )}
 
           <ScrollReveal>
-            <p className="text-center text-xs mt-8" style={{ color: "rgba(255,255,255,0.2)" }}>
-              Payments powered by Revolut. Have an early access code? Use it at checkout for 40% off.
-            </p>
+            <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 10, alignItems: "center", textAlign: "center" }}>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.45)", margin: 0 }}>
+                Early access is open. Payments are securely processed by Revolut Business.
+              </p>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.35)", margin: 0 }}>
+                Have an early access code? Use it at checkout for 40% off.
+              </p>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.25)", margin: 0 }}>
+                By purchasing access, you agree to the{" "}
+                <a href="/pricing-terms" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "underline" }}>Pricing &amp; Access Terms</a>.
+              </p>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.2)", margin: 0, maxWidth: 600, lineHeight: 1.65 }}>
+                Discounted, coupon-based and education access purchases are generally non-refundable once access has been activated, except where required by law or where a verified technical issue prevents access for more than 40% of the active access period.
+              </p>
+            </div>
           </ScrollReveal>
         </div>
       </section>

@@ -394,6 +394,15 @@ export default async function ClientPage({
           </div>
         )}
       </div>
+
+      {/* Privacy footer note */}
+      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "0 24px 40px" }}>
+        <p style={{ ...mono, fontSize: 10, color: "#737373", lineHeight: 1.7, margin: 0 }}>
+          Your account, plan and tool access are managed using the email address connected to your payment or access code. For details about how we process personal data, please see our{" "}
+          <Link href="/privacy-policy" style={{ color: "#737373", textDecoration: "underline" }}>Privacy Policy</Link>.
+        </p>
+      </div>
+
     </div>
   );
 }

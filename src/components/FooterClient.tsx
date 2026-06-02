@@ -9,6 +9,7 @@ const legalLinks = [
   { href: "/privacy-policy", label: "Privacy Policy" },
   { href: "/cookies-policy", label: "Cookies" },
   { href: "/terms-and-conditions", label: "Terms" },
+  { href: "/pricing-terms", label: "Pricing & Access Terms" },
   { href: "/disclaimer", label: "Disclaimer" },
   { href: "/company-information", label: "Company Info" },
   { href: "/copyright", label: "Copyright" },
