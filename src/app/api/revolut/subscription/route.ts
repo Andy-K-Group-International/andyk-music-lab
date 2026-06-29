@@ -43,7 +43,7 @@ async function applyAndMarkCode(code: string, email?: string): Promise<number> {
 }
 
 export async function POST(req: NextRequest) {
-  const { plan, discount_code, accepted_pricing_terms, accepted_pricing_terms_version } = await req.json().catch(() => ({}));
+  const { plan, discount_code, email, accepted_pricing_terms, accepted_pricing_terms_at, accepted_pricing_terms_version } = await req.json().catch(() => ({}));
   if (accepted_pricing_terms !== true) {
     return NextResponse.json({ error: "pricing_terms_required" }, { status: 400 });
   }
@@ -60,6 +60,29 @@ export async function POST(req: NextRequest) {
   if (discount_code) {
     const pct = await applyAndMarkCode(discount_code.trim().toUpperCase());
     if (pct > 0) amount = Math.round(amount * (1 - pct / 100));
+  }
+
+  if (amount <= 0) {
+    const order_id = `free_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    await fetch(`${SUPABASE_URL}/rest/v1/pending_access?on_conflict=order_id`, {
+      method: "POST",
+      headers: { ...sbHeaders(), Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify({
+        order_id,
+        plan,
+        status: "paid",
+        access_granted: false,
+        email: typeof email === "string" ? email.trim().toLowerCase() : "",
+        updated_at: new Date().toISOString(),
+        ...(accepted_pricing_terms !== undefined && { accepted_pricing_terms }),
+        ...(accepted_pricing_terms_at !== undefined && { accepted_pricing_terms_at }),
+        ...(accepted_pricing_terms_version !== undefined && { accepted_pricing_terms_version }),
+      }),
+    });
+    return NextResponse.json({
+      checkout_url: `${APP_URL}/success?plan=${plan}&free=true`,
+      order_id,
+    });
   }
 
   const res = await fetch("https://merchant.revolut.com/api/orders", {

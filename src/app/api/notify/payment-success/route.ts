@@ -44,39 +44,60 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "order_id required" }, { status: 400 });
   }
 
-  const secret = process.env.REVOLUT_SECRET_KEY;
-  if (!secret) return NextResponse.json({ error: "Revolut not configured" }, { status: 500 });
+  let email: string | null = null;
+  let planKey = "";
+  let termsAccepted: boolean | undefined;
+  let termsAt: string | null | undefined;
+  let termsVersion: string | null | undefined;
 
-  // 1. Verify order with Revolut server-side — never trust client-supplied plan/email
-  const revolut = await fetch(`https://merchant.revolut.com/api/orders/${order_id}`, {
-    headers: {
-      Authorization: `Bearer ${secret}`,
-      "Revolut-Api-Version": "2024-09-01",
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
+  if ((order_id as string).startsWith("free_")) {
+    // Free order — no Revolut order exists; read plan/email from pending_access
+    const paRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/pending_access?order_id=eq.${encodeURIComponent(order_id)}&select=plan,email&limit=1`,
+      { headers: sbHeaders(), cache: "no-store" }
+    );
+    const paRows: { plan: string; email: string }[] = paRes.ok ? await paRes.json() : [];
+    if (!paRows.length) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+    planKey = paRows[0].plan ?? "";
+    email = paRows[0].email || null;
+    // terms already stored in pending_access at order creation — leave undefined to skip in upsert
+  } else {
+    const secret = process.env.REVOLUT_SECRET_KEY;
+    if (!secret) return NextResponse.json({ error: "Revolut not configured" }, { status: 500 });
 
-  if (!revolut.ok) {
-    console.error("[payment-success] Revolut order fetch failed", revolut.status);
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    // 1. Verify order with Revolut server-side — never trust client-supplied plan/email
+    const revolut = await fetch(`https://merchant.revolut.com/api/orders/${order_id}`, {
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Revolut-Api-Version": "2024-09-01",
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!revolut.ok) {
+      console.error("[payment-success] Revolut order fetch failed", revolut.status);
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    const order = await revolut.json();
+
+    // 2. Verify order is actually completed
+    if (order.state !== "COMPLETED") {
+      return NextResponse.json({ error: "Order not completed", state: order.state }, { status: 402 });
+    }
+
+    // 3. Extract email and plan from Revolut order — all from trusted source
+    email = order.email ?? order.customer?.email ?? order.metadata?.email ?? null;
+    planKey = order.metadata?.plan ?? "";
+    termsAccepted = order.metadata?.accepted_pricing_terms === "true";
+    termsAt = order.metadata?.accepted_pricing_terms_at ?? null;
+    termsVersion = order.metadata?.accepted_pricing_terms_version ?? null;
   }
 
-  const order = await revolut.json();
-
-  // 2. Verify order is actually completed
-  if (order.state !== "COMPLETED") {
-    return NextResponse.json({ error: "Order not completed", state: order.state }, { status: 402 });
-  }
-
-  // 3. Extract email and plan from Revolut order — all from trusted source
-  const email: string | null =
-    order.email ?? order.customer?.email ?? order.metadata?.email ?? null;
-  const planKey: string = order.metadata?.plan ?? "";
   const planLabel = PLAN_LABELS[planKey] ?? "Music Lab Access";
-  const termsAccepted = order.metadata?.accepted_pricing_terms === "true";
-  const termsAt: string | null = order.metadata?.accepted_pricing_terms_at ?? null;
-  const termsVersion: string | null = order.metadata?.accepted_pricing_terms_version ?? null;
 
   // 4. Upsert pending_access (idempotent by order_id) regardless of email availability
   if (planKey) {
@@ -91,9 +112,9 @@ export async function POST(req: NextRequest) {
           order_id,
           status: "paid",
           access_granted: false,
-          accepted_pricing_terms: termsAccepted,
-          accepted_pricing_terms_at: termsAt,
-          accepted_pricing_terms_version: termsVersion,
+          ...(termsAccepted !== undefined && { accepted_pricing_terms: termsAccepted }),
+          ...(termsAt !== undefined && { accepted_pricing_terms_at: termsAt }),
+          ...(termsVersion !== undefined && { accepted_pricing_terms_version: termsVersion }),
           updated_at: new Date().toISOString(),
         }),
       }
