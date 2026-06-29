@@ -24,21 +24,18 @@ function sbHeaders() {
 }
 
 async function applyAndMarkCode(code: string, email?: string): Promise<number> {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/discount_codes?code=eq.${encodeURIComponent(code)}&used=eq.false&select=discount_percent&limit=1`,
-    { headers: sbHeaders(), cache: "no-store" }
-  );
-  const rows: { discount_percent: number }[] = res.ok ? await res.json() : [];
-  if (!rows.length) return 0;
-
-  await fetch(
-    `${SUPABASE_URL}/rest/v1/discount_codes?code=eq.${encodeURIComponent(code)}`,
+  // Atomic: PATCH with &used=eq.false filter — only succeeds if the row is still unused.
+  // Two concurrent requests with the same code: exactly one sees 1 row, the other sees 0.
+  const patch = await fetch(
+    `${SUPABASE_URL}/rest/v1/discount_codes?code=eq.${encodeURIComponent(code)}&used=eq.false`,
     {
       method: "PATCH",
-      headers: { ...sbHeaders(), Prefer: "return=minimal" },
+      headers: { ...sbHeaders(), Prefer: "return=representation" },
       body: JSON.stringify({ used: true, used_by_email: email ?? null, used_at: new Date().toISOString() }),
     }
   );
+  const rows: { discount_percent: number }[] = patch.ok ? await patch.json() : [];
+  if (!rows.length) return 0;
   return rows[0].discount_percent;
 }
 

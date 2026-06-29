@@ -186,7 +186,7 @@ async function masterAudioDjAndyK(
   let sumSqL = 0, sumSqR = 0;
   for (let i = 0; i < L.length; i++) { sumSqL += L[i] * L[i]; sumSqR += R[i] * R[i]; }
   const rmsIn = Math.sqrt((sumSqL + sumSqR) / (2 * L.length));
-  const gainLin = rmsIn > 1e-9 ? targetRmsLin / rmsIn : 1;
+  const gainLin = rmsIn > 1e-9 ? Math.min(targetRmsLin / rmsIn, 6) : 1;
   for (let i = 0; i < L.length; i++) { L[i] *= gainLin; R[i] *= gainLin; }
 
   onStage("Mastering…");

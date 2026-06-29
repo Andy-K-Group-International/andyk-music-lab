@@ -112,12 +112,18 @@ export default function AudioConverterClient() {
     setError(null);
     setDownloadUrl(null);
     setFileInfo(null);
+    if (f.size > 250 * 1024 * 1024) {
+      setError("File is too large (max 250 MB). Use a desktop DAW for larger files.");
+      return;
+    }
     setStage("Decoding…");
+    let audioCtx: AudioContext | null = null;
     try {
       const ab = await f.arrayBuffer();
-      const audioCtx = new AudioContext();
+      audioCtx = new AudioContext();
       const buffer = await audioCtx.decodeAudioData(ab);
       await audioCtx.close();
+      audioCtx = null;
       const ext = (f.name.split(".").pop() ?? "").toLowerCase();
       setFileInfo({
         name: f.name.replace(/\.[^.]+$/, ""),
@@ -128,6 +134,7 @@ export default function AudioConverterClient() {
         buffer,
       });
     } catch {
+      if (audioCtx) await audioCtx.close().catch(() => {});
       setError("Could not decode this file. Supported inputs: WAV, MP3, FLAC, AAC. FLAC/AAC require Chrome or Safari.");
     } finally {
       setStage(null);
