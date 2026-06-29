@@ -346,6 +346,12 @@ body {
 }
 .pulse-ring { animation: pulse-ring 2s infinite; }
 
+@keyframes feature-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.feature-new-pulse { animation: feature-pulse 2.4s ease-in-out infinite; }
+
 /* ===== PRESET BUTTONS ===== */
 .preset-btn {
   padding: 8px 16px; border-radius: 10px; font-size: 12px; font-weight: 600;

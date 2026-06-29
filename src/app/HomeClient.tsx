@@ -181,7 +181,7 @@ const stats = [
 const pricing: { name: string; gbpPrice: number; periodKey: "oneTime" | "perMonth" | "perYear"; desc: string; features: string[]; featured: boolean; plan: WaitlistPlan }[] = [
   { name: "Single Session", gbpPrice: 79,  periodKey: "oneTime",  plan: "single", featured: false, desc: "One professional mastering session for a single track.", features: ["1 track mastered", "-14 LUFS / -0.3 dBTP", "WAV + MP3 download", "24h turnaround"] },
   { name: "Studio Pass",    gbpPrice: 49,  periodKey: "perMonth", plan: "studio", featured: false, desc: "For producers releasing regularly.",                     features: ["Unlimited masterings", "BPM + Key detector", "DJ Set Planner", "Priority processing", "Stem separation"] },
-  { name: "Pro Pass",       gbpPrice: 199, periodKey: "perYear",  plan: "pro",    featured: true,  desc: "Everything in Studio Pass — billed annually.", features: ["All Studio Pass features", "SAVE_VS_MONTHLY", "Early access to new tools", "Label export formats", "Dedicated support"] },
+  { name: "Pro Pass",       gbpPrice: 199, periodKey: "perYear",  plan: "pro",    featured: true,  desc: "Everything in Studio Pass — billed annually.", features: ["All Studio Pass features", "SAVE_VS_MONTHLY", "Early access to new tools", "Label export formats", "Dedicated support", "Audio Converter — only from DJ Andy’K, free exclusively with Pro Pass"] },
 ];
 
 const individualTools: { id: string; icon: React.ReactNode; name: string; gbpPrice: number; desc: string }[] = [
@@ -995,7 +995,7 @@ export default function HomeClient() {
                     <p className="pricing-desc">{plan.desc}</p>
                     <div className="pricing-features">
                       {plan.features.map((f) => (
-                        <div key={f} className="pricing-feature">
+                        <div key={f} className={`pricing-feature${f.startsWith("Audio Converter") ? " feature-new-pulse" : ""}`}>
                           <span className="pricing-check">✓</span>
                           <span>{f === "SAVE_VS_MONTHLY" ? `Save ${convert(149, currency)} vs monthly` : f}</span>
                         </div>
