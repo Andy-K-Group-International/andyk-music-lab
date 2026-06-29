@@ -26,7 +26,7 @@ type Intensity = "low" | "medium" | "high";
 type StereoWidth = "narrow" | "standard" | "wide";
 type NoiseLevel = "low" | "medium" | "high";
 type Platform = "spotify" | "apple" | "youtube";
-type Preset = "club" | "radio" | "streaming" | "vinyl" | "halsey" | "custom";
+type Preset = "club" | "radio" | "streaming" | "vinyl" | "halsey" | "djandyk_master" | "custom";
 
 interface Settings {
   intensity: Intensity; stereoWidth: StereoWidth; noiseLevel: NoiseLevel;
@@ -35,7 +35,7 @@ interface Settings {
   truePeak?: number;
 }
 
-const PRESETS: Record<Exclude<Preset, "custom">, Settings> = {
+const PRESETS: Record<Exclude<Preset, "custom" | "djandyk_master">, Settings> = {
   club:      { intensity: "high",   stereoWidth: "wide",     noiseLevel: "medium", autoEQ: true,  lowCut: true,  highShelf: true,  limiter: true,  platform: "spotify", eqBands: [3, 2, 0, 2, 1] },
   radio:     { intensity: "high",   stereoWidth: "standard", noiseLevel: "high",   autoEQ: true,  lowCut: true,  highShelf: false, limiter: true,  platform: "apple",   eqBands: [1, 0, 1, 3, 2] },
   streaming: { intensity: "medium", stereoWidth: "standard", noiseLevel: "medium", autoEQ: true,  lowCut: false, highShelf: false, limiter: true,  platform: "spotify", eqBands: [0, 0, 0, 0, 0] },
@@ -142,6 +142,71 @@ async function analyzeBuffer(buf: AudioBuffer, admin = false): Promise<Analysis>
 
   return { bpm, keyNote: NOTE_NAMES[bestNote], keyMode: bestMode, pitch, danceability, ...stats };
 }
+
+// ── DJ Andy'K Master — isolated DSP functions (used exclusively by this preset) ──
+
+function dcOffsetClean(data: Float32Array): void {
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) sum += data[i];
+  const mean = sum / data.length;
+  for (let i = 0; i < data.length; i++) data[i] -= mean;
+}
+
+function softLimitTanh(data: Float32Array, ceilingDb = -1.0, kneePercent = 76): void {
+  const ceiling = Math.pow(10, ceilingDb / 20);
+  const knee = ceiling * (kneePercent / 100);
+  const range = ceiling - knee;
+  for (let i = 0; i < data.length; i++) {
+    const abs = Math.abs(data[i]);
+    if (abs <= knee) continue;
+    const sign = data[i] < 0 ? -1 : 1;
+    const excess = (abs - knee) / range;
+    data[i] = sign * (knee + range * Math.tanh(excess));
+  }
+}
+
+async function masterAudioDjAndyK(
+  buf: AudioBuffer,
+  onStage: (s: string) => void
+): Promise<MasterResult> {
+  onStage("Cleaning DC offset…");
+  const sr = buf.sampleRate;
+  const srcL = buf.getChannelData(0);
+  const srcR = buf.numberOfChannels > 1 ? buf.getChannelData(1) : srcL;
+  const L = new Float32Array(srcL);
+  const R = new Float32Array(srcR);
+
+  // 1. DC offset cleanup per channel
+  dcOffsetClean(L);
+  dcOffsetClean(R);
+
+  onStage("Applying Gain…");
+  // 2. Gain to stereo RMS ≈ -9.8 dBFS → computeStats shows ≈ -10.5 LUFS
+  const targetRmsLin = Math.pow(10, -9.8 / 20);
+  let sumSqL = 0, sumSqR = 0;
+  for (let i = 0; i < L.length; i++) { sumSqL += L[i] * L[i]; sumSqR += R[i] * R[i]; }
+  const rmsIn = Math.sqrt((sumSqL + sumSqR) / (2 * L.length));
+  const gainLin = rmsIn > 1e-9 ? targetRmsLin / rmsIn : 1;
+  for (let i = 0; i < L.length; i++) { L[i] *= gainLin; R[i] *= gainLin; }
+
+  onStage("Mastering…");
+  // 3. Soft limiting with tanh saturation (-1.0 dBFS ceiling, 76% knee)
+  softLimitTanh(L);
+  softLimitTanh(R);
+
+  onStage("Encoding…");
+  const outBuf = new AudioBuffer({ numberOfChannels: 2, length: buf.length, sampleRate: sr });
+  outBuf.getChannelData(0).set(L);
+  outBuf.getChannelData(1).set(R);
+  const wavBytes = encodeWAV(outBuf);
+  const blob = new Blob([wavBytes], { type: "audio/wav" });
+  const url = URL.createObjectURL(blob);
+  const stats = computeStats(outBuf);
+  onStage("Done!");
+  return { url, buffer: outBuf, stats };
+}
+
+// ── End DJ Andy'K Master functions ─────────────────────────────────────────
 
 async function masterAudio(
   buf: AudioBuffer,
@@ -728,7 +793,7 @@ export default function MasteringClient() {
 
   const applyPreset = (p: Preset) => {
     setPreset(p);
-    if (p === "custom") return;
+    if (p === "custom" || p === "djandyk_master") return;
     const s = PRESETS[p];
     setIntensity(s.intensity); setStereoWidth(s.stereoWidth); setNoiseLevel(s.noiseLevel);
     setAutoEQ(s.autoEQ); setLowCut(s.lowCut); setHighShelf(s.highShelf); setLimiter(s.limiter);
@@ -830,9 +895,14 @@ export default function MasteringClient() {
   const doMaster = async () => {
     if (!audioBuffer || !analysis) return;
     setError(null); setResult(null);
-    const settings: Settings = { intensity, stereoWidth, noiseLevel, autoEQ, lowCut, highShelf, limiter, platform, eqBands };
     try {
-      const r = await masterAudio(audioBuffer, settings, { lufs: analysis.lufs, peak: analysis.peak, dr: analysis.dr }, setStage);
+      let r: MasterResult;
+      if (preset === "djandyk_master") {
+        r = await masterAudioDjAndyK(audioBuffer, setStage);
+      } else {
+        const settings: Settings = { intensity, stereoWidth, noiseLevel, autoEQ, lowCut, highShelf, limiter, platform, eqBands };
+        r = await masterAudio(audioBuffer, settings, { lufs: analysis.lufs, peak: analysis.peak, dr: analysis.dr }, setStage);
+      }
       setResult(r);
       const hist = computeLoudnessHistory(r.buffer);
       setLoudnessHistory(hist);
@@ -908,7 +978,9 @@ td:last-child{font-weight:600}
         const buf = await audioCtx.decodeAudioData(ab);
         await audioCtx.close();
         const ana = await analyzeBuffer(buf, isAdmin);
-        const r = await masterAudio(buf, settings, { lufs: ana.lufs, peak: ana.peak, dr: ana.dr }, () => {});
+        const r = preset === "djandyk_master"
+          ? await masterAudioDjAndyK(buf, () => {})
+          : await masterAudio(buf, settings, { lufs: ana.lufs, peak: ana.peak, dr: ana.dr }, () => {});
         const wavBytes = encodeWAV(r.buffer);
         zip.file(`${f.name.replace(/\.[^.]+$/, "")}_master.wav`, wavBytes);
       } catch { /* skip failed file */ }
@@ -1075,9 +1147,14 @@ td:last-child{font-weight:600}
             <div className="glass-card rounded-2xl p-5 mb-4">
               <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-muted-2)", marginBottom: 12 }}>Preset Styles</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {(["club", "radio", "streaming", "vinyl", "halsey", "custom"] as Preset[]).map(p => (
+                {(["club", "radio", "streaming", "vinyl", "halsey", "djandyk_master", "custom"] as Preset[]).map(p => (
                   <button key={p} className={`preset-btn ${preset === p ? "active" : ""}`} onClick={() => applyPreset(p)}>
-                    {p === "halsey" ? "Halsey / Vocal Pop" : p.charAt(0).toUpperCase() + p.slice(1)}
+                    {p === "djandyk_master" ? (
+                      <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+                        <span>DJ Andy&apos;K Master</span>
+                        <span style={{ fontSize: 9, opacity: 0.65, fontWeight: 400, letterSpacing: 0 }}>−10.5 LUFS / −1.0 dBFS soft-limited, no EQ</span>
+                      </span>
+                    ) : p === "halsey" ? "Halsey / Vocal Pop" : p.charAt(0).toUpperCase() + p.slice(1)}
                   </button>
                 ))}
               </div>
