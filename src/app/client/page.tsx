@@ -11,6 +11,7 @@ const ALL_TOOLS = [
   { href: "/metronome",        name: "Metronome",          toolName: "metronome" },
   { href: "/loudness-meter",   name: "Loudness Meter",     toolName: "loudness-meter" },
   { href: "/stem-splitter",    name: "Stem Splitter",      toolName: "stem-splitter" },
+  { href: "/audio-converter",  name: "Audio Converter",    toolName: "audio-converter" },
 ];
 
 const PLAN_LABEL: Record<string, string> = {
@@ -147,6 +148,24 @@ function LoudnessPreview() {
   );
 }
 
+function AudioConverterPreview() {
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ ...mono, fontSize: 10, fontWeight: 700, color: "#111111", border: "1px solid #e5e5e5", padding: "3px 7px" }}>MP3</span>
+        <span style={{ ...mono, fontSize: 10, color: "#a3a3a3" }}>→</span>
+        <span style={{ ...mono, fontSize: 10, fontWeight: 700, color: "#111111", border: "1px solid #e5e5e5", padding: "3px 7px" }}>WAV</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+        <span style={{ ...mono, fontSize: 10, fontWeight: 700, color: "#a3a3a3", border: "1px solid #e5e5e5", padding: "3px 7px" }}>FLAC</span>
+        <span style={{ ...mono, fontSize: 10, color: "#a3a3a3" }}>→</span>
+        <span style={{ ...mono, fontSize: 10, fontWeight: 700, color: "#a3a3a3", border: "1px solid #e5e5e5", padding: "3px 7px" }}>MP3</span>
+      </div>
+      <p style={{ ...label10, marginTop: 10 }}>FORMAT CONVERSION</p>
+    </div>
+  );
+}
+
 function StemPreview() {
   const faders: { label: string; h: number }[] = [
     { label: "VOC", h: 70 },
@@ -176,7 +195,8 @@ const TOOL_META: Record<string, { preview: React.ReactNode; subtitle: string }> 
   "chord-generator": { preview: <ChordPreview />,     subtitle: "FIND CHORDS" },
   "metronome":       { preview: <MetronomePreview />, subtitle: "STAY IN TIME" },
   "loudness-meter":  { preview: <LoudnessPreview />,  subtitle: "" },
-  "stem-splitter":   { preview: <StemPreview />,      subtitle: "SPLIT YOUR TRACKS" },
+  "stem-splitter":   { preview: <StemPreview />,            subtitle: "SPLIT YOUR TRACKS" },
+  "audio-converter": { preview: <AudioConverterPreview />, subtitle: "CONVERT FORMAT" },
 };
 
 export default async function ClientPage({

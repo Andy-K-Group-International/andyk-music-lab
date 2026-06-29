@@ -6,7 +6,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const PLAN_TOOLS: Record<string, string[]> = {
   single:          ["mastering"],
   studio:          ["mastering","bpm","planner","track-comparator","chord-generator","metronome","loudness-meter","stem-splitter"],
-  pro:             ["mastering","bpm","planner","track-comparator","chord-generator","metronome","loudness-meter","stem-splitter"],
+  pro:             ["mastering","bpm","planner","track-comparator","chord-generator","metronome","loudness-meter","stem-splitter","audio-converter"],
   tool_mastering:  ["mastering"],
   tool_bpm:        ["bpm"],
   tool_planner:    ["planner"],
