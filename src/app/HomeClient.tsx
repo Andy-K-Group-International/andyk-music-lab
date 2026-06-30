@@ -212,6 +212,8 @@ export default function HomeClient() {
   const [discountStatus, setDiscountStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
   const [currency, setCurrency] = useState<Currency>("GBP");
   const [pricingTab, setPricingTab] = useState<"plans" | "tools">("plans");
+  const [checkoutEmail, setCheckoutEmail] = useState("");
+  const [checkoutEmailError, setCheckoutEmailError] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsError, setTermsError] = useState("");
   const [introMuted, setIntroMuted] = useState(true);
@@ -354,6 +356,12 @@ export default function HomeClient() {
       return;
     }
     setTermsError("");
+    const emailTrimmed = checkoutEmail.trim().toLowerCase();
+    if (!emailTrimmed || !emailTrimmed.includes("@")) {
+      setCheckoutEmailError("Please enter your email address before continuing.");
+      return;
+    }
+    setCheckoutEmailError("");
     setLoadingPlan(plan);
     try {
       const endpoint =
@@ -363,6 +371,7 @@ export default function HomeClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           plan,
+          email: emailTrimmed,
           discount_code: discountCode || undefined,
           accepted_pricing_terms: true,
           accepted_pricing_terms_version: "v1.0",
@@ -939,6 +948,34 @@ export default function HomeClient() {
                 Join the waitlist to lock in your discount →
               </button>
             </p>
+          </div>
+
+          {/* Email for access */}
+          <div style={{ marginBottom: 16 }}>
+            <input
+              type="email"
+              value={checkoutEmail}
+              onChange={e => { setCheckoutEmail(e.target.value); if (checkoutEmailError) setCheckoutEmailError(""); }}
+              placeholder="Your email address for access"
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                background: "#ffffff",
+                border: `1px solid ${checkoutEmailError ? "#f87171" : "rgba(255,255,255,0.2)"}`,
+                borderRadius: 0,
+                color: "#111111",
+                fontFamily: "var(--font-mono)",
+                fontSize: 12,
+                letterSpacing: "0.06em",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+            {checkoutEmailError && (
+              <span style={{ display: "block", fontFamily: "var(--font-mono)", fontSize: 10, color: "#f87171", letterSpacing: "0.1em", paddingTop: 6 }}>
+                {checkoutEmailError}
+              </span>
+            )}
           </div>
 
           {/* Terms acceptance */}
